@@ -15,7 +15,7 @@ services:
 
   api:
     build:
-      context: ./api/knowledge-repository
+      context: ./api
     container_name: knowledge-api
     restart: unless-stopped
     depends_on:
