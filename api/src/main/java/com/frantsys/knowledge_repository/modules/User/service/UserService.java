@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.frantsys.knowledge_repository.modules.User.dto.UserUpdateActivationRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.UserCreateRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.UserLoginRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.UserResponse;
 import com.frantsys.knowledge_repository.modules.User.dto.UserSummaryResponse;
 import com.frantsys.knowledge_repository.modules.User.dto.UserUpdatePasswordRequest;
@@ -17,10 +18,10 @@ import com.frantsys.knowledge_repository.modules.User.model.User;
 import com.frantsys.knowledge_repository.modules.User.model.UserRole;
 import com.frantsys.knowledge_repository.modules.User.repository.UserRepository;
 
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
 
 @Service
-@RequiredArgsConstructor 
+@AllArgsConstructor  
 public class UserService {
 
     private final UserRepository repository;
@@ -118,6 +119,20 @@ public class UserService {
 
     }
 
-    // Criar user login;
+    // Lógica de Login temporária sem JWT
+    @Transactional 
+    public String login(UserLoginRequest request) {
+        
+        User user = repository.findByEmail(request.getEmail())
+            .orElseThrow(() -> new RuntimeException("Credenciais inválidas."));
+
+        if(!encoder.matches(request.getPassword(), user.getPassword())) {
+            throw new RuntimeException("Credenciais inválidas.");
+        }
+
+        return "TOKEN_DE_AUTENTICACAO";
+
+    }
+
     
 }

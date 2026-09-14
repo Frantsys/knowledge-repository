@@ -21,7 +21,9 @@ public interface UserMapper {
 
     UserAddress toAddressEntity(UserAddressCreateRequest request);
 
+    @Mapping(target = "address", source = "address")
     UserResponse toResponse(User user);
+    
     UserSummaryResponse toSummaryResponse(User user);
 
 }

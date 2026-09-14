@@ -3,8 +3,10 @@ package com.frantsys.knowledge_repository.modules.User.dto;
 import com.frantsys.knowledge_repository.modules.User.model.UserRole;
 
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter 
+@Setter
 public class UserSummaryResponse {
     
     private Long id;
