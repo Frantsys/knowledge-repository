@@ -53,9 +53,12 @@ public class Material {
     private String course;
 
     @Column(nullable = false)
-    private Long likes;
+    private Integer likes;
 
-    @Column(nullable = false, name = "updated_at")
+    @Column(nullable = false)
+    private Integer views;
+
+    @Column(nullable = true, name = "updated_at")
     private LocalDateTime updatedAt;
 
     @Column(nullable = false, name = "created_by")

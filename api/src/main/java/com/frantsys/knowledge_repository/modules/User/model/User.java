@@ -3,6 +3,8 @@ package com.frantsys.knowledge_repository.modules.User.model;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import org.hibernate.validator.constraints.br.CPF;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -30,6 +32,7 @@ public class User {
     private Long id;
 
     @Column(nullable = false)
+    @CPF
     private String cpf;
 
     @Column(nullable = false)

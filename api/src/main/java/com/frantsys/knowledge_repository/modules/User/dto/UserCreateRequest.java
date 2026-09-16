@@ -2,6 +2,8 @@ package com.frantsys.knowledge_repository.modules.User.dto;
 
 import java.time.LocalDate;
 
+import org.hibernate.validator.constraints.br.CPF;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -18,6 +20,7 @@ import lombok.Setter;
 public class UserCreateRequest {
 
     @NotBlank(message = "CPF é obrigatório")
+    @CPF(message = "CPF deve ser válido")
     @Size(min = 14, max = 14, message = "CPF deve ter 11 números")
     @Pattern(regexp = "^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$", message = "CPF inválido")
     private String cpf;

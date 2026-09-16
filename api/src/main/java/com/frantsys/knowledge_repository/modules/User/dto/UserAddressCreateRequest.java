@@ -22,7 +22,7 @@ public class UserAddressCreateRequest {
     private String street;
 
     @NotBlank(message = "Número é obrigatório")
-    private String number;
+    private Integer number;
     
     @NotBlank(message = "Bairro é obrigatório")
     private String district;

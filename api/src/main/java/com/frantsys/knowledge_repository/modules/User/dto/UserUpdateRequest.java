@@ -1,9 +1,16 @@
 package com.frantsys.knowledge_repository.modules.User.dto;
 
-public record UserUpdateRequest(
-    String firstName,
-    String lastname,
-    String phoneNumber,
-    UserAddressCreateRequest address,
-    String course
-) {}
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter 
+@Setter 
+public class UserUpdateRequest {
+    
+    private String firstName;
+    private String lastname;
+    private String phoneNumber;
+    private UserAddressCreateRequest address;
+    private String course;
+
+}

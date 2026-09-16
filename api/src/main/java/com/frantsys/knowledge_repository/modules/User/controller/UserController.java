@@ -31,27 +31,29 @@ import org.springframework.web.bind.annotation.PostMapping;
 @RequiredArgsConstructor
 public class UserController {
     
-    private final UserService service;
+    private final UserService userService;
 
     @GetMapping
     public ResponseEntity<List<UserSummaryResponse>> findAll() {
 
-        List<UserSummaryResponse> users = service.findAll();
+        List<UserSummaryResponse> users = userService.findAll();
         return ResponseEntity.ok(users);
 
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> findById(@PathVariable Long id) {
-        UserResponse user = service.findById(id);
+        
+        UserResponse user = userService.findById(id);
 
         return ResponseEntity.ok(user);
+    
     }
 
     @PostMapping
     public ResponseEntity<UserResponse> createUser(@RequestBody @Valid UserCreateRequest request) {
         
-        UserResponse user = service.createUser(request);
+        UserResponse user = userService.createUser(request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(user);
 
@@ -59,16 +61,20 @@ public class UserController {
 
     @PatchMapping("/{id}/activation")
     public ResponseEntity<UserResponse> updateStatus(@PathVariable Long id, @RequestBody @Valid UserUpdateActivationRequest request) {
-        UserResponse updatedUser = service.updateActivationById(id, request);
+        
+        UserResponse updatedUser = userService.updateActivationById(id, request);
 
         return ResponseEntity.ok(updatedUser);
+
     }
 
     @PatchMapping("/{id}/password")
     public ResponseEntity<UserResponse> changePasswordById(@PathVariable Long id, @RequestBody @Valid UserUpdatePasswordRequest request) {
-        service.updatePassword(id, request);
+        
+        userService.updatePassword(id, request);
 
         return ResponseEntity.noContent().build();
+        
     }
 
     

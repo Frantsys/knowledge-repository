@@ -1,5 +1,6 @@
 package com.frantsys.knowledge_repository.modules.User.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,57 +25,63 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor  
 public class UserService {
 
-    private final UserRepository repository;
-    private final UserMapper mapper;
-    private final PasswordEncoder encoder;
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public UserResponse createUser(UserCreateRequest request) {
 
-        User user = mapper.toEntity(request);
+        User user = userMapper.toEntity(request);
 
-        user.setPassword(encoder.encode(request.getPassword()));
+        String rawPassword = user.getPassword();
+        String encodedPassword = passwordEncoder.encode(rawPassword);
+
+        user.setCreatedAt(LocalDateTime.now());
         user.setIsActive(true);
         user.setRole(UserRole.ROLE_STUDENT);
+        user.setPassword(encodedPassword);
 
-        User savedUser = repository.save(user);
+        User savedUser = userRepository.save(user);
 
-        return mapper.toResponse(savedUser);
+        return userMapper.toResponse(savedUser);
 
     }
 
     @Transactional
     public UserResponse updateUser(Long id, UserUpdateRequest request) {
-        User userToUpdate = repository.findById(id)
+
+        User userToUpdate = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + id)); 
 
-        if (request.firstName() != null && !request.firstName().isBlank()) {
-            userToUpdate.setFirstName(request.firstName());
+        if (request.getFirstName() != null && !request.getFirstName().isBlank()) {
+            userToUpdate.setFirstName(request.getFirstName());
         }
 
-        if (request.lastname() != null && !request.lastname().isBlank()) {
-            userToUpdate.setLastName(request.lastname());
+        if (request.getLastname() != null && !request.getLastname().isBlank()) {
+            userToUpdate.setLastName(request.getLastname());
         }
 
-        if (request.phoneNumber() != null) {
-            userToUpdate.setPhoneNumber(request.phoneNumber());
+        if (request.getPhoneNumber() != null) {
+            userToUpdate.setPhoneNumber(request.getPhoneNumber());
         }
         
-        if (request.address() != null) {
-            userToUpdate.setAddress(mapper.toAddressEntity(request.address()));
+        if (request.getAddress() != null) {
+            userToUpdate.setAddress(userMapper.toAddressEntity(request.getAddress()));
         }
         
-        User updatedUser = repository.save(userToUpdate);
+        User updatedUser = userRepository.save(userToUpdate);
 
-        return mapper.toResponse(updatedUser);
+        return userMapper.toResponse(updatedUser);
+        
     }
 
     @Transactional(readOnly = true)
     public List<UserSummaryResponse> findAll() {
 
-        return repository.findAll()
+        return userRepository.findAll()
             .stream()
-            .map(mapper::toSummaryResponse)
+            .map(userMapper::toSummaryResponse)
             .toList();
 
     }
@@ -82,40 +89,40 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse findById(Long id) {
 
-        User user = repository.findById(id)
+        User user = userRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + id));
 
-        return mapper.toResponse(user);
+        return userMapper.toResponse(user);
 
     }
 
     @Transactional()
     public void updatePassword(Long id, UserUpdatePasswordRequest request) {
 
-        User user = repository.findById(id)
+        User user = userRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Usuário não foi encontrado com ID: " +  id));
 
-        if(!encoder.matches(request.getCurrentPassword(), user.getPassword())) {
+        if(!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new RuntimeException("Senha atual incorreta");
         }
 
-        user.setPassword(encoder.encode(request.getNewPassword()));;
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));;
 
-        repository.save(user);
+        userRepository.save(user);
 
     }
 
     @Transactional
     public UserResponse updateActivationById(Long id, UserUpdateActivationRequest request) {
 
-        User user = repository.findById(id)
+        User user = userRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Usuário não foi encontrado com ID: " +  id));
 
         user.setIsActive(request.getIsActive());
 
-        repository.save(user);
+        userRepository.save(user);
 
-        return mapper.toResponse(user);
+        return userMapper.toResponse(user);
 
     }
 
@@ -123,10 +130,10 @@ public class UserService {
     @Transactional 
     public String login(UserLoginRequest request) {
         
-        User user = repository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(request.getEmail())
             .orElseThrow(() -> new RuntimeException("Credenciais inválidas."));
 
-        if(!encoder.matches(request.getPassword(), user.getPassword())) {
+        if(!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Credenciais inválidas.");
         }
 
