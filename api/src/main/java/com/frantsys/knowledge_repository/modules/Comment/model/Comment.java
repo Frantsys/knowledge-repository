@@ -1,7 +1,6 @@
 package com.frantsys.knowledge_repository.modules.Comment.model;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import com.frantsys.knowledge_repository.modules.Material.model.Material;
 import com.frantsys.knowledge_repository.modules.User.model.User;
@@ -40,9 +39,11 @@ public class Comment {
     @JoinColumn(nullable = false, name = "user_id")
     private User user;
 
+    /*
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false, name = "comments")
-    List<Comment> comments;
+    private List<Comment> comments;
+    */
 
     @Column(nullable = false)
     private String body;

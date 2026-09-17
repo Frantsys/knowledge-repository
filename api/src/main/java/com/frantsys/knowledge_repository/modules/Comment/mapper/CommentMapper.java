@@ -13,7 +13,6 @@ public interface CommentMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "material", ignore = true)
     @Mapping(target = "user", ignore = true)
-    @Mapping(target = "comments", ignore = true)
     @Mapping(target = "likes", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
@@ -21,6 +20,8 @@ public interface CommentMapper {
     @Mapping(target = "isActive", ignore = true)
     Comment toEntity(CommentCreateRequest request);
 
+    @Mapping(target = "materialId", ignore = true)
+    @Mapping(target = "userId", ignore = true)
     CommentResponse toResponse(Comment request);
     
 }

@@ -7,7 +7,6 @@ import lombok.Setter;
 @Setter 
 public class MaterialUpdateRequest {
     
-    private Long id;
     private String title;
     private String body;
     private String subject;
