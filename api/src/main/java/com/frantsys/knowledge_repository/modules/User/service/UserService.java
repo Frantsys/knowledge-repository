@@ -51,26 +51,26 @@ public class UserService {
     @Transactional
     public UserResponse updateUser(Long id, UserUpdateRequest request) {
 
-        User userToUpdate = userRepository.findById(id)
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + id)); 
 
         if (request.getFirstName() != null && !request.getFirstName().isBlank()) {
-            userToUpdate.setFirstName(request.getFirstName());
+            user.setFirstName(request.getFirstName());
         }
 
         if (request.getLastname() != null && !request.getLastname().isBlank()) {
-            userToUpdate.setLastName(request.getLastname());
+            user.setLastName(request.getLastname());
         }
 
         if (request.getPhoneNumber() != null) {
-            userToUpdate.setPhoneNumber(request.getPhoneNumber());
+            user.setPhoneNumber(request.getPhoneNumber());
         }
         
         if (request.getAddress() != null) {
-            userToUpdate.setAddress(userMapper.toAddressEntity(request.getAddress()));
+            user.setAddress(userMapper.toAddressEntity(request.getAddress()));
         }
         
-        User updatedUser = userRepository.save(userToUpdate);
+        User updatedUser = userRepository.save(user);
 
         return userMapper.toResponse(updatedUser);
         

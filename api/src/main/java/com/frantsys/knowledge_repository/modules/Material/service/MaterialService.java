@@ -33,7 +33,10 @@ public class MaterialService {
 
         if(request.getUserId() != null) {
             User userRef = userRepository.getReferenceById(request.getUserId());
+            String userFullname = userRef.getFirstName() + userRef.getLastName();
+
             material.setUser(userRef);
+            material.setCreatedBy(userFullname);
         }
         
         material.setLikes(0);
@@ -71,26 +74,26 @@ public class MaterialService {
     @Transactional 
     public MaterialResponse updateById(Long id, MaterialUpdateRequest request) {
 
-        Material materialToUpdate = materialRepository.findById(id)
+        Material material = materialRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Material não encontrado com ID: " + id));
         
         if(request.getTitle() != null && !request.getTitle().isBlank()) {
-            materialToUpdate.setTitle(request.getTitle());
+            material.setTitle(request.getTitle());
         }
 
         if(request.getBody() != null && !request.getBody().isBlank()) {
-            materialToUpdate.setBody(request.getBody());
+            material.setBody(request.getBody());
         }
 
         if(request.getSubject() != null && !request.getSubject().isBlank()) {
-            materialToUpdate.setSubject(request.getSubject());
+            material.setSubject(request.getSubject());
         }
 
         if(request.getCourse() != null && !request.getCourse().isBlank()) {
-            materialToUpdate.setCourse(request.getCourse());
+            material.setCourse(request.getCourse());
         }
 
-        Material updatedMaterial = materialRepository.save(materialToUpdate);
+        Material updatedMaterial = materialRepository.save(material);
 
         return materialMapper.toResponse(updatedMaterial);
 

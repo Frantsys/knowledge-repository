@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @Tag(name = "Material", description = "API path for managing materials")
 @RestController 
-@RequestMapping("v1/api/materials")
+@RequestMapping("/v1/api/materials")
 @RequiredArgsConstructor 
 public class MaterialController {
 
