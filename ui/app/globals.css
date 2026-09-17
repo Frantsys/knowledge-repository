@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --muted-foreground: #757474;
+
+  --primary: #7936E3;
+  --border: #E2E8F0;
+  --ring: #a1a1a1;
+  --radius: 0.625rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-muted-foreground: var(--muted-foreground);
+  --font-sans: var(--font-be-vietnam-pro-sans);
+  --font-headings: var(--font-archivo-headings);
+  --default-font-family: var(--font-be-vietnam-pro-sans);
+  --radius-default: var(--radius);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+
+
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
