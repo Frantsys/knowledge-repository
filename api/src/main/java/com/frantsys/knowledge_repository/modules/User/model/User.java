@@ -34,11 +34,11 @@ public class User {
     @Column(nullable = false)
     @CPF
     private String cpf;
-
-    @Column(nullable = false)
+    
+    @Column(nullable = false, name = "first_name")
     private String firstName;
 
-    @Column(nullable = false)
+    @Column(nullable = false, name = "last_name")
     private String lastName;
 
     @Column(nullable = false)
