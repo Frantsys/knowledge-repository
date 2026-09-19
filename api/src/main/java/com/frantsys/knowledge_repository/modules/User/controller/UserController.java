@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.frantsys.knowledge_repository.modules.User.dto.LoginResponse;
+import com.frantsys.knowledge_repository.modules.User.dto.UserLoginRequest;
 
 import com.frantsys.knowledge_repository.modules.User.dto.UserCreateRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.UserResponse;
@@ -85,5 +87,16 @@ public class UserController {
         userService.updatePassword(id, request);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(
+            @RequestBody @Valid UserLoginRequest request
+    ) {
+        String token = userService.login(request);
+
+        return ResponseEntity.ok(
+            new LoginResponse(token)
+        );
     }
 }
