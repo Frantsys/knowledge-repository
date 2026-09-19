@@ -1,17 +1,12 @@
 import Navbar from "@/components/navbar";
 
-export default function homePage({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="pt-BR">
-      <body>
-        <Navbar />
 
-        {children}
-      </body>
-    </html>
+export default function HomePage() {
+  return (
+    <main>
+      <Navbar />
+
+      <h1>Início</h1>
+    </main>
   );
 }
