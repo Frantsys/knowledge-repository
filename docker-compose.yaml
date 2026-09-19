@@ -29,15 +29,20 @@ services:
   ui:
     build:
       context: ./ui
-      dockerfile: Dockerfile
-    image: knowledge-repository-ui-image
-    container_name: knowledge-repository-ui
+      dockerfile: dockerfile
+    container_name: ui
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./ui:/app
+      - /app/node_modules
+      - /app/.next
     environment:
       NODE_ENV: production
       PORT: "3000"
-    ports:
-      - "3000:3000"
-    restart: unless-stopped
+    command: npm run dev
+    depends_on:
+      - api
 
 volumes:
   postgres_data:
