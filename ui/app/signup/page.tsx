@@ -81,7 +81,7 @@ export default function Signup() {
 
       alert("Conta criada com sucesso!");
 
-      router.push("/signin");
+      router.push("/login");
     } catch (error) {
       console.error("Erro de conexão:", error);
 

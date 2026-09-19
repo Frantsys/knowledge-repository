@@ -23,6 +23,23 @@ export async function login(
         }
     );
 
+    console.log("URL:", `${API_URL}/v1/api/users/login`);
+    console.log("STATUS:", response.status);
+    console.log("CONTENT-TYPE:", response.headers.get("content-type"));
+
+    const contentType = response.headers.get("content-type");
+
+    if (!contentType?.includes("application/json")) {
+        const text = await response.text();
+
+        console.error("RESPOSTA DO SERVIDOR:");
+        console.error(text);
+
+        throw new Error(
+            `Servidor retornou ${response.status} em vez de JSON.`
+        );
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
