@@ -29,7 +29,11 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
 
+<<<<<<< HEAD
             .cors(Customizer.withDefaults())
+=======
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+>>>>>>> df2ca3e (feat: implement user signup functionality with form validation and API integration)
 
             .authorizeHttpRequests(authorize -> authorize
                 .anyRequest().permitAll()
