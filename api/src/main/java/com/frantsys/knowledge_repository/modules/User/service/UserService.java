@@ -49,7 +49,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse updateUser(Long id, UserUpdateRequest request) {
+    public UserResponse updateById(Long id, UserUpdateRequest request) {
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + id)); 

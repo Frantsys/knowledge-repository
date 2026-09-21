@@ -49,11 +49,10 @@ public class MaterialController {
 
     }
     
-
     @PostMapping
     public ResponseEntity<MaterialResponse> create(@RequestBody @Valid MaterialCreateRequest request) {
         
-        MaterialResponse material = materialService.create(request);
+        MaterialResponse material = materialService.createMaterial(request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(material);
 

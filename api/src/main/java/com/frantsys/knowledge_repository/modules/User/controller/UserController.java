@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.frantsys.knowledge_repository.modules.User.dto.UserUpdateActivationRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.UserCreateRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.UserUpdatePasswordRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.UserUpdateRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.UserResponse;
 import com.frantsys.knowledge_repository.modules.User.dto.UserSummaryResponse;
 import com.frantsys.knowledge_repository.modules.User.service.UserService;
@@ -51,7 +52,7 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<UserResponse> createUser(@RequestBody @Valid UserCreateRequest request) {
+    public ResponseEntity<UserResponse> create(@RequestBody @Valid UserCreateRequest request) {
         
         UserResponse user = userService.createUser(request);
 
@@ -59,12 +60,21 @@ public class UserController {
 
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<UserResponse> update(@PathVariable Long id, @RequestBody @Valid UserUpdateRequest request) {
+
+        UserResponse user = userService.updateById(id, request);
+
+        return ResponseEntity.ok(user);
+        
+    }
+
     @PatchMapping("/{id}/activation")
     public ResponseEntity<UserResponse> updateStatus(@PathVariable Long id, @RequestBody @Valid UserUpdateActivationRequest request) {
         
-        UserResponse updatedUser = userService.updateActivationById(id, request);
+        UserResponse user = userService.updateActivationById(id, request);
 
-        return ResponseEntity.ok(updatedUser);
+        return ResponseEntity.ok(user);
 
     }
 

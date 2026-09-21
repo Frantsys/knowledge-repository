@@ -27,7 +27,7 @@ public class MaterialService {
     private final MaterialMapper materialMapper;
 
     @Transactional
-    public MaterialResponse create(MaterialCreateRequest request) {
+    public MaterialResponse createMaterial(MaterialCreateRequest request) {
 
         Material material = materialMapper.toEntity(request);
 

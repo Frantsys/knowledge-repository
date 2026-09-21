@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.frantsys.knowledge_repository.modules.Comment.dto.CommentCreateRequest;
 import com.frantsys.knowledge_repository.modules.Comment.dto.CommentResponse;
+import com.frantsys.knowledge_repository.modules.Comment.dto.CommentUpdateRequest;
 import com.frantsys.knowledge_repository.modules.Comment.service.CommentService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,6 +17,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,6 +41,15 @@ public class CommentController {
 
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<CommentResponse> update(@PathVariable Long id, @RequestBody @Valid CommentUpdateRequest request) {
+
+        CommentResponse comment = commentService.updateById(id, request);
+
+        return ResponseEntity.ok(comment);
+
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<CommentResponse> findById(@PathVariable Long id) {
         
@@ -51,7 +62,7 @@ public class CommentController {
     @PostMapping
     public ResponseEntity<CommentResponse> create(@RequestBody @Valid CommentCreateRequest request) {
         
-        CommentResponse comment = commentService.create(request);
+        CommentResponse comment = commentService.createComment(request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(comment);
 

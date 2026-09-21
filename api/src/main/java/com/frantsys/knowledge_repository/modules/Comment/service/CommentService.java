@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.frantsys.knowledge_repository.modules.Comment.dto.CommentCreateRequest;
 import com.frantsys.knowledge_repository.modules.Comment.dto.CommentResponse;
+import com.frantsys.knowledge_repository.modules.Comment.dto.CommentUpdateRequest;
 import com.frantsys.knowledge_repository.modules.Comment.mapper.CommentMapper;
 import com.frantsys.knowledge_repository.modules.Comment.model.Comment;
 import com.frantsys.knowledge_repository.modules.Comment.repository.CommentRepository;
@@ -28,7 +29,7 @@ public class CommentService {
     private final CommentMapper commentMapper;
 
     @Transactional
-    public CommentResponse create(CommentCreateRequest request) {
+    public CommentResponse createComment(CommentCreateRequest request) {
 
         Comment comment = commentMapper.toEntity(request);
 
@@ -50,6 +51,21 @@ public class CommentService {
         comment.setUpdatedAt(null);
         comment.setCreatedAt(LocalDateTime.now());
         comment.setIsActive(true);
+
+        Comment savedComment = commentRepository.save(comment);
+
+        return commentMapper.toResponse(savedComment);
+
+    }
+
+    @Transactional
+    public CommentResponse updateById(Long id, CommentUpdateRequest request) {
+
+        Comment comment = commentRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Comentário não encontrado com ID: " + id));
+
+        comment.setBody(request.getBody());
+        comment.setUpdatedAt(LocalDateTime.now());
 
         Comment savedComment = commentRepository.save(comment);
 

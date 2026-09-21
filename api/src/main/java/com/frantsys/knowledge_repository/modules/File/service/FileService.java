@@ -37,7 +37,7 @@ public class FileService {
     }
     
     @Transactional
-    public FileResponse updateFile(Long id, FileUpdateRequest request) {
+    public FileResponse updateById(Long id, FileUpdateRequest request) {
 
         File file = fileRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Arquivo não encontrado com ID: " + id));

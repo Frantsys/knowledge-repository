@@ -43,7 +43,7 @@ public class FileController {
     }
 
     @PostMapping
-    public ResponseEntity<FileResponse> createFile(@RequestBody @Valid FileCreateRequest request) {
+    public ResponseEntity<FileResponse> create(@RequestBody @Valid FileCreateRequest request) {
         
         FileResponse file = fileService.createFile(request);
         
@@ -51,9 +51,9 @@ public class FileController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<FileResponse> updateFile(@PathVariable Long id, @RequestBody @Valid FileUpdateRequest request) {
+    public ResponseEntity<FileResponse> update(@PathVariable Long id, @RequestBody @Valid FileUpdateRequest request) {
 
-        FileResponse file = fileService.updateFile(id, request);
+        FileResponse file = fileService.updateById(id, request);
 
         return ResponseEntity.ok(file);
 
