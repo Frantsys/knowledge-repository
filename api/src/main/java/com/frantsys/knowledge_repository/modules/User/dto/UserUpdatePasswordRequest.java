@@ -9,6 +9,9 @@ import lombok.Setter;
 @Setter 
 public class UserUpdatePasswordRequest {
 
+    @NotBlank(message = "E-mail é obrigatório")
+    private String email;
+
     @NotBlank(message = "Senha atual é obrigatória")
     private String currentPassword;
 
