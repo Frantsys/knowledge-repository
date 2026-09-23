@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.frantsys.knowledge_repository.modules.Material.dto.MaterialCreateRequest;
 import com.frantsys.knowledge_repository.modules.Material.dto.MaterialResponse;
+import com.frantsys.knowledge_repository.modules.Material.dto.MaterialUpdateActivationRequest;
 import com.frantsys.knowledge_repository.modules.Material.dto.MaterialUpdateRequest;
 import com.frantsys.knowledge_repository.modules.Material.service.MaterialService;
 
@@ -59,11 +60,20 @@ public class MaterialController {
     }
     
     @PatchMapping("/{id}")
-    public ResponseEntity<MaterialResponse> updateById(@PathVariable Long id, @RequestBody @Valid MaterialUpdateRequest request) {
+    public ResponseEntity<MaterialResponse> update(@PathVariable Long id, @RequestBody @Valid MaterialUpdateRequest request) {
 
         MaterialResponse material = materialService.updateById(id, request);
 
         return ResponseEntity.status(HttpStatus.OK).body(material);
+
+    }
+
+    @PatchMapping("/{id}/activation")
+    public ResponseEntity<MaterialResponse> updateActivation(@PathVariable Long id, @RequestBody @Valid MaterialUpdateActivationRequest request) {
+
+        MaterialResponse material = materialService.updateActivationById(id, request);
+
+        return ResponseEntity.ok(material);
 
     }
     

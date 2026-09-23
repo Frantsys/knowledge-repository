@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.frantsys.knowledge_repository.modules.Material.dto.MaterialCreateRequest;
 import com.frantsys.knowledge_repository.modules.Material.dto.MaterialResponse;
+import com.frantsys.knowledge_repository.modules.Material.dto.MaterialUpdateActivationRequest;
 import com.frantsys.knowledge_repository.modules.Material.dto.MaterialUpdateRequest;
 import com.frantsys.knowledge_repository.modules.Material.mapper.MaterialMapper;
 import com.frantsys.knowledge_repository.modules.Material.model.Material;
@@ -96,6 +97,20 @@ public class MaterialService {
         Material updatedMaterial = materialRepository.save(material);
 
         return materialMapper.toResponse(updatedMaterial);
+
+    }
+
+    @Transactional
+    public MaterialResponse updateActivationById(Long id, MaterialUpdateActivationRequest request) {
+
+        Material material = materialRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Material não encontrado com ID: " + id));
+        
+        material.setIsActive(request.getIsActive());
+
+        materialRepository.save(material);
+
+        return materialMapper.toResponse(material);
 
     }
 
