@@ -70,7 +70,7 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/activation")
-    public ResponseEntity<UserResponse> updateStatus(@PathVariable Long id, @RequestBody @Valid UserUpdateActivationRequest request) {
+    public ResponseEntity<UserResponse> updateActivation(@PathVariable Long id, @RequestBody @Valid UserUpdateActivationRequest request) {
         
         UserResponse user = userService.updateActivationById(id, request);
 

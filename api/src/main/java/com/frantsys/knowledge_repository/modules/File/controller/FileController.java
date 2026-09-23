@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.frantsys.knowledge_repository.modules.File.dto.FileCreateRequest;
 import com.frantsys.knowledge_repository.modules.File.dto.FileResponse;
+import com.frantsys.knowledge_repository.modules.File.dto.FileUpdateActivationRequest;
 import com.frantsys.knowledge_repository.modules.File.dto.FileUpdateRequest;
 import com.frantsys.knowledge_repository.modules.File.service.FileService;
 
@@ -69,6 +70,14 @@ public class FileController {
 
     }
     
+    @PatchMapping("/{id}/activation")
+    public ResponseEntity<FileResponse> updateActivation(@PathVariable Long id, @RequestBody @Valid FileUpdateActivationRequest request) {
+        
+        FileResponse file = fileService.updateActivationById(id, request);
+
+        return ResponseEntity.ok(file);
+
+    }
     
     
 }

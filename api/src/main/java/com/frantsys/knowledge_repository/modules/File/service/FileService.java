@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.frantsys.knowledge_repository.modules.File.dto.FileCreateRequest;
 import com.frantsys.knowledge_repository.modules.File.dto.FileResponse;
+import com.frantsys.knowledge_repository.modules.File.dto.FileUpdateActivationRequest;
 import com.frantsys.knowledge_repository.modules.File.dto.FileUpdateRequest;
 import com.frantsys.knowledge_repository.modules.File.mapper.FileMapper;
 import com.frantsys.knowledge_repository.modules.File.model.File;
@@ -85,6 +86,20 @@ public class FileService {
             .stream()
             .map(fileMapper::toResponse)
             .toList();
+
+    }
+
+    @Transactional
+    public FileResponse updateActivationById(Long id, FileUpdateActivationRequest request) {
+
+        File file = fileRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Usuário não foi encontrado com ID: " +  id));
+
+        file.setIsActive(request.getIsActive());
+
+        fileRepository.save(file);
+
+        return fileMapper.toResponse(file);
 
     }
 
