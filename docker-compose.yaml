@@ -2,7 +2,7 @@ services:
 
   postgres:
     image: postgres:16
-    container_name: knowledge-postgres
+    container_name: knowledge-repository-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -16,7 +16,7 @@ services:
   api:
     build:
       context: ./api
-    container_name: knowledge-api
+    container_name: knowledge-repository-api
     restart: unless-stopped
     depends_on:
       - postgres

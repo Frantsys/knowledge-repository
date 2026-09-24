@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.frantsys.knowledge_repository.modules.Comment.dto.CommentCreateRequest;
+import com.frantsys.knowledge_repository.modules.Comment.dto.CommentReplyCreateRequest;
 import com.frantsys.knowledge_repository.modules.Comment.dto.CommentResponse;
 import com.frantsys.knowledge_repository.modules.Comment.dto.CommentUpdateRequest;
 import com.frantsys.knowledge_repository.modules.Comment.mapper.CommentMapper;
@@ -14,8 +15,6 @@ import com.frantsys.knowledge_repository.modules.Comment.model.Comment;
 import com.frantsys.knowledge_repository.modules.Comment.repository.CommentRepository;
 import com.frantsys.knowledge_repository.modules.Material.model.Material;
 import com.frantsys.knowledge_repository.modules.Material.repository.MaterialRepository;
-import com.frantsys.knowledge_repository.modules.User.model.User;
-import com.frantsys.knowledge_repository.modules.User.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 public class CommentService {
     
     private final CommentRepository commentRepository;
-    private final UserRepository userRepository;
     private final MaterialRepository materialRepository;
     private final CommentMapper commentMapper;
 
@@ -33,18 +31,32 @@ public class CommentService {
 
         Comment comment = commentMapper.toEntity(request);
 
-        if(request.getUserId() != null) {
-            User userRef = userRepository.getReferenceById(request.getUserId());
-            String userFullname = userRef.getFirstName() + userRef.getLastName();
-
-            comment.setUser(userRef);
-            comment.setCreatedBy(userFullname);
-        }
-
         if(request.getMaterialId() != null) {
             Material materialRef = materialRepository.getReferenceById(request.getMaterialId());
 
             comment.setMaterial(materialRef);
+        }
+
+        comment.setLikes(0);
+        comment.setUpdatedAt(null);
+        comment.setCreatedAt(LocalDateTime.now());
+        comment.setIsActive(true);
+
+        Comment savedComment = commentRepository.save(comment);
+
+        return commentMapper.toResponse(savedComment);
+
+    }
+
+    @Transactional
+    public CommentResponse createReply(Long parentId, CommentReplyCreateRequest request, Long userId) {
+        
+        Comment comment = commentMapper.toEntityReply(request);
+
+        if(request.getParentId() != null) {
+            Comment commentRef = commentRepository.getReferenceById(request.getParentId());
+
+            comment.setParent(commentRef);
         }
 
         comment.setLikes(0);

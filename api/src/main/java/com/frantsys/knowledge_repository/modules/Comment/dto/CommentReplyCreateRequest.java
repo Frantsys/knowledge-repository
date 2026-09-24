@@ -8,10 +8,10 @@ import lombok.Setter;
 
 @Getter 
 @Setter 
-public class CommentCreateRequest {
+public class CommentReplyCreateRequest {
 
-    @NotNull(message = "Material não pode ser nulo")
-    private Long materialId;
+    @NotNull(message = "Parente não pode ser nulo")
+    private Long parentId;
 
     @NotBlank(message = "O comentário é obrigatório")
     @Size(min = 1, max = 254, message = "O comentário deve ter entre 1 a 254 caracteres")

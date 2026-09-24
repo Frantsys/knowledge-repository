@@ -13,10 +13,6 @@ import com.frantsys.knowledge_repository.modules.Material.dto.MaterialUpdateRequ
 import com.frantsys.knowledge_repository.modules.Material.mapper.MaterialMapper;
 import com.frantsys.knowledge_repository.modules.Material.model.Material;
 import com.frantsys.knowledge_repository.modules.Material.repository.MaterialRepository;
-import com.frantsys.knowledge_repository.modules.User.repository.UserRepository;
-
-import com.frantsys.knowledge_repository.modules.User.model.User; 
-
 import lombok.AllArgsConstructor;
 
 @Service 
@@ -24,7 +20,6 @@ import lombok.AllArgsConstructor;
 public class MaterialService {
     
     private final MaterialRepository materialRepository;
-    private final UserRepository userRepository;
     private final MaterialMapper materialMapper;
 
     @Transactional
@@ -32,14 +27,6 @@ public class MaterialService {
 
         Material material = materialMapper.toEntity(request);
 
-        if(request.getUserId() != null) {
-            User userRef = userRepository.getReferenceById(request.getUserId());
-            String userFullname = userRef.getFirstName() + userRef.getLastName();
-
-            material.setUser(userRef);
-            material.setCreatedBy(userFullname);
-        }
-        
         material.setLikes(0);
         material.setViews(0);
         material.setUpdatedAt(null);

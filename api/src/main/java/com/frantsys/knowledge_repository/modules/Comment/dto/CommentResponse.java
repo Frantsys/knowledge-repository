@@ -12,6 +12,7 @@ public class CommentResponse {
     private Long id;
     private Long materialId;
     private Long userId;
+    private Long parentId;
     private String body;
     private Integer likes;
     private LocalDateTime updatedAt;

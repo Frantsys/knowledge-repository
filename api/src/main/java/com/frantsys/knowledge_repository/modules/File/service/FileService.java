@@ -13,6 +13,8 @@ import com.frantsys.knowledge_repository.modules.File.dto.FileUpdateRequest;
 import com.frantsys.knowledge_repository.modules.File.mapper.FileMapper;
 import com.frantsys.knowledge_repository.modules.File.model.File;
 import com.frantsys.knowledge_repository.modules.File.repository.FileRepository;
+import com.frantsys.knowledge_repository.modules.Material.model.Material;
+import com.frantsys.knowledge_repository.modules.Material.repository.MaterialRepository;
 
 import lombok.AllArgsConstructor;
 
@@ -21,12 +23,20 @@ import lombok.AllArgsConstructor;
 public class FileService {
 
     private final FileRepository fileRepository;
+    private final MaterialRepository materialRepository;
     private final FileMapper fileMapper;
 
     @Transactional
     public FileResponse createFile(FileCreateRequest request) {
 
         File file = fileMapper.toEntity(request);
+
+        if(request.getMaterialId() != null) {
+            Material materialRef = materialRepository.getReferenceById(request.getMaterialId());
+
+            file.setMaterial(materialRef);
+            file.setCreatedBy(materialRef.getCreatedBy());
+        }
 
         file.setCreatedAt(LocalDateTime.now());
         file.setIsActive(true);

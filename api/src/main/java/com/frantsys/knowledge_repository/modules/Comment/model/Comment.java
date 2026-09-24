@@ -1,7 +1,10 @@
 package com.frantsys.knowledge_repository.modules.Comment.model;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.frantsys.knowledge_repository.modules.Material.model.Material;
 import com.frantsys.knowledge_repository.modules.User.model.User;
 
@@ -13,6 +16,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -39,13 +43,15 @@ public class Comment {
     @JoinColumn(nullable = false, name = "user_id")
     private User user;
 
-    /*
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(nullable = false, name = "comments")
-    private List<Comment> comments;
-    */
+    @JoinColumn(name = "parent_id")
+    @JsonIgnore
+    private Comment parent;
 
-    @Column(nullable = false)
+    @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
+    private List<Comment> replies = new ArrayList<>();
+
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
 
     @Column(nullable = false)

@@ -1,7 +1,6 @@
 package com.frantsys.knowledge_repository.modules.Material.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -10,9 +9,6 @@ import lombok.Setter;
 @Setter 
 public class MaterialCreateRequest {
 
-    @NotNull(message = "Autor não pode ser nulo")
-    private Long userId;
-    
     @NotBlank(message = "Título é obrigatório")
     @Size(min = 3, max = 128, message = "Título deve ter entre 3 a 128 caracteres")
     private String title;

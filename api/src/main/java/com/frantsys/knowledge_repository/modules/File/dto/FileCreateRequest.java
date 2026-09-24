@@ -21,7 +21,7 @@ public class FileCreateRequest {
     @NotBlank(message = "Tipo é obrigatório")
     private String type;
 
-    @NotNull(message = "Op é obrigatório")
+    @NotNull(message = "Definição de leitura não pode ser nulo")
     private Boolean readOnly;
 
     @NotNull(message = "Nome é obrigatório")
