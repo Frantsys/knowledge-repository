@@ -1,4 +1,4 @@
-package com.frantsys.knowledge_repository.modules.User.dto;
+package com.frantsys.knowledge_repository.modules.User.dto.request;
 
 import lombok.Getter;
 import lombok.Setter;

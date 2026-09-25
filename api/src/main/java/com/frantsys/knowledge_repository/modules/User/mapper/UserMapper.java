@@ -3,10 +3,10 @@ package com.frantsys.knowledge_repository.modules.User.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import com.frantsys.knowledge_repository.modules.User.dto.UserAddressCreateRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.UserCreateRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.UserResponse;
-import com.frantsys.knowledge_repository.modules.User.dto.UserSummaryResponse;
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserAddressCreateRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserCreateRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.response.UserResponse;
+import com.frantsys.knowledge_repository.modules.User.dto.response.UserSummaryResponse;
 import com.frantsys.knowledge_repository.modules.User.model.User;
 import com.frantsys.knowledge_repository.modules.User.model.UserAddress;
 
@@ -22,8 +22,8 @@ public interface UserMapper {
     UserAddress toAddressEntity(UserAddressCreateRequest request);
 
     @Mapping(target = "address", source = "address")
-    UserResponse toResponse(User user);
+    UserResponse toResponse(User response);
     
-    UserSummaryResponse toSummaryResponse(User user);
+    UserSummaryResponse toSummaryResponse(User response);
 
 }

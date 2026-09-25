@@ -1,4 +1,4 @@
-package com.frantsys.knowledge_repository.modules.Comment.dto;
+package com.frantsys.knowledge_repository.modules.Comment.dto.request;
 
 import java.time.LocalDateTime;
 

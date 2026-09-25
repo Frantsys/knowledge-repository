@@ -1,12 +1,13 @@
 package com.frantsys.knowledge_repository.modules.File.controller;
 
+import com.frantsys.knowledge_repository.modules.File.dto.response.FileSummaryResponse;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.frantsys.knowledge_repository.modules.File.dto.FileCreateRequest;
-import com.frantsys.knowledge_repository.modules.File.dto.FileResponse;
-import com.frantsys.knowledge_repository.modules.File.dto.FileUpdateActivationRequest;
-import com.frantsys.knowledge_repository.modules.File.dto.FileUpdateRequest;
+import com.frantsys.knowledge_repository.modules.File.dto.request.FileCreateRequest;
+import com.frantsys.knowledge_repository.modules.File.dto.response.FileResponse;
+import com.frantsys.knowledge_repository.modules.File.dto.request.FileUpdateActivationRequest;
+import com.frantsys.knowledge_repository.modules.File.dto.request.FileUpdateRequest;
 import com.frantsys.knowledge_repository.modules.File.service.FileService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,6 +39,15 @@ public class FileController {
     public ResponseEntity<List<FileResponse>> findAll() {
         
         List<FileResponse> files = fileService.findAll();
+
+        return ResponseEntity.ok(files);
+
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<List<FileSummaryResponse>> findAllSummary() {
+
+        List<FileSummaryResponse> files = fileService.findAllSummary();
 
         return ResponseEntity.ok(files);
 

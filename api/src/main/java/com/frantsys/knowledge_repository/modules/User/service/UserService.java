@@ -7,13 +7,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.frantsys.knowledge_repository.modules.User.dto.UserUpdateActivationRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.UserCreateRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.UserLoginRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.UserResponse;
-import com.frantsys.knowledge_repository.modules.User.dto.UserSummaryResponse;
-import com.frantsys.knowledge_repository.modules.User.dto.UserUpdatePasswordRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.UserUpdateRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdateActivationRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserCreateRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserLoginRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.response.UserResponse;
+import com.frantsys.knowledge_repository.modules.User.dto.response.UserSummaryResponse;
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdatePasswordRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdateRequest;
 import com.frantsys.knowledge_repository.modules.User.mapper.UserMapper;
 import com.frantsys.knowledge_repository.modules.User.model.User;
 import com.frantsys.knowledge_repository.modules.User.model.UserRole;
@@ -77,7 +77,17 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public List<UserSummaryResponse> findAll() {
+    public List<UserResponse> findAll() {
+
+        return userRepository.findAll()
+                .stream()
+                .map(userMapper::toResponse)
+                .toList();
+
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserSummaryResponse> findAllSummary() {
 
         return userRepository.findAll()
             .stream()
@@ -106,7 +116,7 @@ public class UserService {
             throw new RuntimeException("Senha atual incorreta");
         }
 
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));;
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
 
         userRepository.save(user);
 

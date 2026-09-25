@@ -3,12 +3,12 @@ package com.frantsys.knowledge_repository.modules.User.controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.frantsys.knowledge_repository.modules.User.dto.UserUpdateActivationRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.UserCreateRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.UserUpdatePasswordRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.UserUpdateRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.UserResponse;
-import com.frantsys.knowledge_repository.modules.User.dto.UserSummaryResponse;
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdateActivationRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserCreateRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdatePasswordRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdateRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.response.UserResponse;
+import com.frantsys.knowledge_repository.modules.User.dto.response.UserSummaryResponse;
 import com.frantsys.knowledge_repository.modules.User.service.UserService;
 
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -35,9 +35,19 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    public ResponseEntity<List<UserSummaryResponse>> findAll() {
+    public ResponseEntity<List<UserResponse>> findAll() {
 
-        List<UserSummaryResponse> users = userService.findAll();
+        List<UserResponse> users = userService.findAll();
+
+        return ResponseEntity.ok(users);
+
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<List<UserSummaryResponse>> findAllSummary() {
+
+        List<UserSummaryResponse> users = userService.findAllSummary();
+
         return ResponseEntity.ok(users);
 
     }

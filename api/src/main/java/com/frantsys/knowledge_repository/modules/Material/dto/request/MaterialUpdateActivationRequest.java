@@ -1,4 +1,4 @@
-package com.frantsys.knowledge_repository.modules.Material.dto;
+package com.frantsys.knowledge_repository.modules.Material.dto.request;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;

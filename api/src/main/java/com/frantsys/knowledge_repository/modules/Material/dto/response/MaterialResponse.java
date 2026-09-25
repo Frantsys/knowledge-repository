@@ -1,8 +1,8 @@
-package com.frantsys.knowledge_repository.modules.Material.dto;
+package com.frantsys.knowledge_repository.modules.Material.dto.response;
 
 import java.time.LocalDateTime;
 
-import com.frantsys.knowledge_repository.modules.User.dto.UserResponse;
+import com.frantsys.knowledge_repository.modules.User.dto.response.UserResponse;
 
 import lombok.Getter;
 import lombok.Setter;

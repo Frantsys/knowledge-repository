@@ -3,13 +3,14 @@ package com.frantsys.knowledge_repository.modules.File.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.frantsys.knowledge_repository.modules.File.dto.response.FileSummaryResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.frantsys.knowledge_repository.modules.File.dto.FileCreateRequest;
-import com.frantsys.knowledge_repository.modules.File.dto.FileResponse;
-import com.frantsys.knowledge_repository.modules.File.dto.FileUpdateActivationRequest;
-import com.frantsys.knowledge_repository.modules.File.dto.FileUpdateRequest;
+import com.frantsys.knowledge_repository.modules.File.dto.request.FileCreateRequest;
+import com.frantsys.knowledge_repository.modules.File.dto.response.FileResponse;
+import com.frantsys.knowledge_repository.modules.File.dto.request.FileUpdateActivationRequest;
+import com.frantsys.knowledge_repository.modules.File.dto.request.FileUpdateRequest;
 import com.frantsys.knowledge_repository.modules.File.mapper.FileMapper;
 import com.frantsys.knowledge_repository.modules.File.model.File;
 import com.frantsys.knowledge_repository.modules.File.repository.FileRepository;
@@ -96,6 +97,16 @@ public class FileService {
             .stream()
             .map(fileMapper::toResponse)
             .toList();
+
+    }
+
+    @Transactional(readOnly = true)
+    public List<FileSummaryResponse> findAllSummary() {
+
+        return fileRepository.findAll()
+                .stream()
+                .map(fileMapper::toSummaryResponse)
+                .toList();
 
     }
 

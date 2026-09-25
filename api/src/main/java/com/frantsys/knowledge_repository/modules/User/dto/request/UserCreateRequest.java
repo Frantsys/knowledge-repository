@@ -1,4 +1,4 @@
-package com.frantsys.knowledge_repository.modules.User.dto;
+package com.frantsys.knowledge_repository.modules.User.dto.request;
 
 import java.time.LocalDate;
 
@@ -42,7 +42,6 @@ public class UserCreateRequest {
     private String password;
 
     @NotBlank(message = "Telefone é obrigatório")
-    @Pattern(regexp = "^(?:\\+?55\\s?)?(?:\\(?([1-9][1-9])\\)?\\s?)?(?:((?:9\\d|[2-9])\\d{3})\\s?-?\\s?(\\d{4}))$", message = "Telefone inválido")
     private String phoneNumber;
 
     @NotBlank(message = "Gênero é obrigatório")

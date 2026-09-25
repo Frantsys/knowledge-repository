@@ -3,13 +3,14 @@ package com.frantsys.knowledge_repository.modules.Material.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.frantsys.knowledge_repository.modules.Material.dto.response.MaterialSummaryResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.frantsys.knowledge_repository.modules.Material.dto.MaterialCreateRequest;
-import com.frantsys.knowledge_repository.modules.Material.dto.MaterialResponse;
-import com.frantsys.knowledge_repository.modules.Material.dto.MaterialUpdateActivationRequest;
-import com.frantsys.knowledge_repository.modules.Material.dto.MaterialUpdateRequest;
+import com.frantsys.knowledge_repository.modules.Material.dto.request.MaterialCreateRequest;
+import com.frantsys.knowledge_repository.modules.Material.dto.response.MaterialResponse;
+import com.frantsys.knowledge_repository.modules.Material.dto.request.MaterialUpdateActivationRequest;
+import com.frantsys.knowledge_repository.modules.Material.dto.request.MaterialUpdateRequest;
 import com.frantsys.knowledge_repository.modules.Material.mapper.MaterialMapper;
 import com.frantsys.knowledge_repository.modules.Material.model.Material;
 import com.frantsys.knowledge_repository.modules.Material.repository.MaterialRepository;
@@ -57,6 +58,16 @@ public class MaterialService {
             .map(materialMapper::toResponse)
             .toList();
         
+    }
+
+    @Transactional(readOnly = true)
+    public List<MaterialSummaryResponse> findAllSummary() {
+
+        return materialRepository.findAll()
+                .stream()
+                .map(materialMapper::toSummaryResponse)
+                .toList();
+
     }
 
     @Transactional 

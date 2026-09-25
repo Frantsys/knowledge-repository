@@ -1,8 +1,9 @@
-package com.frantsys.knowledge_repository.modules.User.dto;
+package com.frantsys.knowledge_repository.modules.User.dto.response;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserAddressCreateRequest;
 import com.frantsys.knowledge_repository.modules.User.model.UserRole;
 
 import lombok.Getter;

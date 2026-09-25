@@ -3,13 +3,15 @@ package com.frantsys.knowledge_repository.modules.Comment.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.frantsys.knowledge_repository.modules.Comment.dto.response.CommentSummaryResponse;
+import com.frantsys.knowledge_repository.modules.User.model.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.frantsys.knowledge_repository.modules.Comment.dto.CommentCreateRequest;
-import com.frantsys.knowledge_repository.modules.Comment.dto.CommentReplyCreateRequest;
-import com.frantsys.knowledge_repository.modules.Comment.dto.CommentResponse;
-import com.frantsys.knowledge_repository.modules.Comment.dto.CommentUpdateRequest;
+import com.frantsys.knowledge_repository.modules.Comment.dto.request.CommentCreateRequest;
+import com.frantsys.knowledge_repository.modules.Comment.dto.request.CommentReplyCreateRequest;
+import com.frantsys.knowledge_repository.modules.Comment.dto.response.CommentResponse;
+import com.frantsys.knowledge_repository.modules.Comment.dto.request.CommentUpdateRequest;
 import com.frantsys.knowledge_repository.modules.Comment.mapper.CommentMapper;
 import com.frantsys.knowledge_repository.modules.Comment.model.Comment;
 import com.frantsys.knowledge_repository.modules.Comment.repository.CommentRepository;
@@ -53,10 +55,12 @@ public class CommentService {
         
         Comment comment = commentMapper.toEntityReply(request);
 
-        if(request.getParentId() != null) {
-            Comment commentRef = commentRepository.getReferenceById(request.getParentId());
+        if(request.getParentId() != null && request.getParentId().equals(parentId)) {
+            Comment commentParent = commentRepository.getReferenceById(request.getParentId());
+            comment.setParent(commentParent);
 
-            comment.setParent(commentRef);
+            User userRef = commentRepository.getReferenceById(userId).getUser();
+            comment.setUser(userRef);
         }
 
         comment.setLikes(0);
@@ -92,6 +96,16 @@ public class CommentService {
             .stream()
             .map(commentMapper::toResponse)
             .toList();
+
+    }
+
+    @Transactional(readOnly = true)
+    public List<CommentSummaryResponse> findAllSummary() {
+
+        return commentRepository.findAll()
+                .stream()
+                .map(commentMapper::toSummaryResponse)
+                .toList();
 
     }
 

@@ -1,11 +1,13 @@
 package com.frantsys.knowledge_repository.modules.Comment.controller;
 
+import com.frantsys.knowledge_repository.modules.Comment.dto.request.CommentReplyCreateRequest;
+import com.frantsys.knowledge_repository.modules.Comment.dto.response.CommentSummaryResponse;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.frantsys.knowledge_repository.modules.Comment.dto.CommentCreateRequest;
-import com.frantsys.knowledge_repository.modules.Comment.dto.CommentResponse;
-import com.frantsys.knowledge_repository.modules.Comment.dto.CommentUpdateRequest;
+import com.frantsys.knowledge_repository.modules.Comment.dto.request.CommentCreateRequest;
+import com.frantsys.knowledge_repository.modules.Comment.dto.response.CommentResponse;
+import com.frantsys.knowledge_repository.modules.Comment.dto.request.CommentUpdateRequest;
 import com.frantsys.knowledge_repository.modules.Comment.service.CommentService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,6 +43,15 @@ public class CommentController {
 
     }
 
+    @GetMapping("/summary")
+    public ResponseEntity<List<CommentSummaryResponse>> findAllSummary() {
+
+        List<CommentSummaryResponse> comments = commentService.findAllSummary();
+
+        return ResponseEntity.ok(comments);
+
+    }
+
     @PatchMapping("/{id}")
     public ResponseEntity<CommentResponse> update(@PathVariable Long id, @RequestBody @Valid CommentUpdateRequest request) {
 
@@ -63,6 +74,15 @@ public class CommentController {
     public ResponseEntity<CommentResponse> create(@RequestBody @Valid CommentCreateRequest request) {
         
         CommentResponse comment = commentService.createComment(request);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(comment);
+
+    }
+
+    @PostMapping("/{parentId}/reply=?{userId}")
+    public ResponseEntity<CommentResponse> createReply(@PathVariable Long parentId, @RequestBody @Valid CommentReplyCreateRequest request, @PathVariable Long userId) {
+
+        CommentResponse comment = commentService.createReply(parentId, request, userId);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(comment);
 

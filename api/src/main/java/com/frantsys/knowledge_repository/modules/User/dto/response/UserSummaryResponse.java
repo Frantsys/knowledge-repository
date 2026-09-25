@@ -1,4 +1,4 @@
-package com.frantsys.knowledge_repository.modules.User.dto;
+package com.frantsys.knowledge_repository.modules.User.dto.response;
 
 import com.frantsys.knowledge_repository.modules.User.model.UserRole;
 

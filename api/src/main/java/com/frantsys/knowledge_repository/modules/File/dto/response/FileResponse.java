@@ -1,4 +1,4 @@
-package com.frantsys.knowledge_repository.modules.File.dto;
+package com.frantsys.knowledge_repository.modules.File.dto.response;
 
 import java.time.LocalDateTime;
 

@@ -1,4 +1,4 @@
-package com.frantsys.knowledge_repository.modules.Material.dto;
+package com.frantsys.knowledge_repository.modules.Material.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

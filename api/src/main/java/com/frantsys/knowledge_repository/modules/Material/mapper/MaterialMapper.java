@@ -1,10 +1,11 @@
 package com.frantsys.knowledge_repository.modules.Material.mapper;
 
+import com.frantsys.knowledge_repository.modules.Material.dto.response.MaterialSummaryResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import com.frantsys.knowledge_repository.modules.Material.dto.MaterialCreateRequest;
-import com.frantsys.knowledge_repository.modules.Material.dto.MaterialResponse;
+import com.frantsys.knowledge_repository.modules.Material.dto.request.MaterialCreateRequest;
+import com.frantsys.knowledge_repository.modules.Material.dto.response.MaterialResponse;
 import com.frantsys.knowledge_repository.modules.Material.model.Material;
 
 @Mapper(componentModel = "spring")
@@ -21,6 +22,8 @@ public interface MaterialMapper {
     Material toEntity(MaterialCreateRequest request);
 
     @Mapping(source = "user.id", target = "userId")
-    MaterialResponse toResponse(Material request);
+    MaterialResponse toResponse(Material response);
+
+    MaterialSummaryResponse toSummaryResponse(Material response);
 
 }

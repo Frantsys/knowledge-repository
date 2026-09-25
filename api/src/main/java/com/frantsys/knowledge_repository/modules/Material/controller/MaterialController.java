@@ -1,12 +1,13 @@
 package com.frantsys.knowledge_repository.modules.Material.controller;
 
+import com.frantsys.knowledge_repository.modules.Material.dto.response.MaterialSummaryResponse;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.frantsys.knowledge_repository.modules.Material.dto.MaterialCreateRequest;
-import com.frantsys.knowledge_repository.modules.Material.dto.MaterialResponse;
-import com.frantsys.knowledge_repository.modules.Material.dto.MaterialUpdateActivationRequest;
-import com.frantsys.knowledge_repository.modules.Material.dto.MaterialUpdateRequest;
+import com.frantsys.knowledge_repository.modules.Material.dto.request.MaterialCreateRequest;
+import com.frantsys.knowledge_repository.modules.Material.dto.response.MaterialResponse;
+import com.frantsys.knowledge_repository.modules.Material.dto.request.MaterialUpdateActivationRequest;
+import com.frantsys.knowledge_repository.modules.Material.dto.request.MaterialUpdateRequest;
 import com.frantsys.knowledge_repository.modules.Material.service.MaterialService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,6 +38,15 @@ public class MaterialController {
         
         List<MaterialResponse> materials = materialService.findAll();
         
+        return ResponseEntity.ok(materials);
+
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<List<MaterialSummaryResponse>> findAllSummary() {
+
+        List<MaterialSummaryResponse> materials = materialService.findAllSummary();
+
         return ResponseEntity.ok(materials);
 
     }
