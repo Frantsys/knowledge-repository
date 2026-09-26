@@ -678,9 +678,11 @@ export default function Navbar() {
                       shadow-xl
                     "
                   >
-                    {/* Informações */}
+                    {/* Informações da conta */}
 
-                    <div
+                    <Link
+                      href="/perfil"
+                      onClick={() => setProfileOpen(false)}
                       className="
                         mb-1
                         flex
@@ -690,6 +692,8 @@ export default function Navbar() {
                         bg-gray-50
                         px-3
                         py-3
+                        transition
+                        hover:bg-purple-50
                       "
                     >
                       <div
@@ -719,7 +723,7 @@ export default function Navbar() {
                           Minha conta
                         </p>
                       </div>
-                    </div>
+                    </Link>
 
                     {/* Perfil */}
 
@@ -992,7 +996,9 @@ export default function Navbar() {
 
                 {/* Perfil */}
 
-                <div
+                <Link
+                  href="/perfil"
+                  onClick={() => setMenuOpen(false)}
                   className="
                     mt-2
                     flex
@@ -1002,6 +1008,8 @@ export default function Navbar() {
                     border-gray-100
                     px-3
                     pt-4
+                    transition
+                    hover:bg-gray-50
                   "
                 >
                   <div
@@ -1031,20 +1039,14 @@ export default function Navbar() {
                     </p>
                   </div>
 
-                  <Link
-                    href="/perfil"
-                    onClick={() => setMenuOpen(false)}
+                  <Settings
+                    size={18}
                     className="
                       ml-auto
-                      rounded-md
-                      p-2
                       text-gray-500
-                      hover:bg-gray-100
                     "
-                  >
-                    <Settings size={18} />
-                  </Link>
-                </div>
+                  />
+                </Link>
 
                 {/* Sair */}
 
