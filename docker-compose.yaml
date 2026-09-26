@@ -2,21 +2,21 @@ services:
 
   postgres:
     image: postgres:16
-    container_name: knowledge-repository-postgres
+    container_name: knowledge-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT}:5442"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   api:
     build:
       context: ./api
-    container_name: knowledge-repository-api
+    container_name: knowledge-api
     restart: unless-stopped
     depends_on:
       - postgres
@@ -26,6 +26,23 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "8080:8080"
+  ui:
+    build:
+      context: ./ui
+      dockerfile: dockerfile
+    container_name: ui
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./ui:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    command: npm run dev
+    depends_on:
+      - api
 
 volumes:
   postgres_data:
