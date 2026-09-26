@@ -59,11 +59,11 @@ public class FileService {
         }
 
         if (request.getSize() != null && !request.getSize().isBlank()) {
-            file.setName(request.getSize());
+            file.setSize(request.getSize());
         }
 
         if (request.getType() != null && !request.getType().isBlank()) {
-            file.setName(request.getType());
+            file.setType(request.getType());
         }
 
         if (request.getReadOnly() != null) {
