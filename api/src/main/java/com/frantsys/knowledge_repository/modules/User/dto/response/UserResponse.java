@@ -6,11 +6,15 @@ import java.time.LocalDateTime;
 import com.frantsys.knowledge_repository.modules.User.dto.request.UserAddressCreateRequest;
 import com.frantsys.knowledge_repository.modules.User.model.UserRole;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter 
-@Setter 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserResponse {
     
     private Long id;

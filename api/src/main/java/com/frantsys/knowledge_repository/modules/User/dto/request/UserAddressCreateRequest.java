@@ -1,6 +1,7 @@
 package com.frantsys.knowledge_repository.modules.User.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,7 +22,7 @@ public class UserAddressCreateRequest {
     @NotBlank(message = "Rua é obrigatória")
     private String street;
 
-    @NotBlank(message = "Número é obrigatório")
+    @NotNull(message = "Número é obrigatório")
     private Integer number;
     
     @NotBlank(message = "Bairro é obrigatório")

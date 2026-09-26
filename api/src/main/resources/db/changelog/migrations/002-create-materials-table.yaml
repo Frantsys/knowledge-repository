@@ -1,0 +1,74 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-materials-table
+      author: francis
+      changes:
+        - createTable:
+            tableName: materials
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: body
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: subject
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: course
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: likes
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: views
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+              - column:
+                  name: created_by
+                  type: VARCHAR(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_active
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: materials
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_materials_user

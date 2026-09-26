@@ -3,12 +3,14 @@ package com.frantsys.knowledge_repository.modules.User.model;
 import jakarta.persistence.Embeddable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Embeddable
 @Getter
 @Setter
-@AllArgsConstructor 
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserAddress {
     
     private String country;

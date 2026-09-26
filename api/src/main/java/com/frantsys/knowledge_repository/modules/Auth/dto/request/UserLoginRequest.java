@@ -1,4 +1,4 @@
-package com.frantsys.knowledge_repository.modules.User.dto.request;
+package com.frantsys.knowledge_repository.modules.Auth.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

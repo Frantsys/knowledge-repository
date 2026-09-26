@@ -1,12 +1,9 @@
 package com.frantsys.knowledge_repository.modules.User.controller;
 
+import com.frantsys.knowledge_repository.modules.User.dto.request.*;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdateActivationRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.request.UserCreateRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdatePasswordRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdateRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.response.UserResponse;
 import com.frantsys.knowledge_repository.modules.User.dto.response.UserSummaryResponse;
 import com.frantsys.knowledge_repository.modules.User.service.UserService;
@@ -18,12 +15,10 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 
 
 @Tag(name = "User", description = "API path for managing users")
@@ -59,15 +54,6 @@ public class UserController {
 
         return ResponseEntity.ok(user);
     
-    }
-
-    @PostMapping
-    public ResponseEntity<UserResponse> create(@RequestBody @Valid UserCreateRequest request) {
-        
-        UserResponse user = userService.createUser(request);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(user);
-
     }
 
     @PatchMapping("/{id}")

@@ -2,11 +2,11 @@ package com.frantsys.knowledge_repository.modules.User.dto.response;
 
 import com.frantsys.knowledge_repository.modules.User.model.UserRole;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter 
-@Setter
+@AllArgsConstructor
 public class UserSummaryResponse {
     
     private Long id;

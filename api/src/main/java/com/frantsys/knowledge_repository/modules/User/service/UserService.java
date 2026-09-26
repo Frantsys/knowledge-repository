@@ -1,52 +1,31 @@
 package com.frantsys.knowledge_repository.modules.User.service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
+import com.frantsys.knowledge_repository.modules.User.dto.request.*;
+import org.jspecify.annotations.NonNull;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdateActivationRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.request.UserCreateRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.request.UserLoginRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.response.UserResponse;
 import com.frantsys.knowledge_repository.modules.User.dto.response.UserSummaryResponse;
-import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdatePasswordRequest;
-import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdateRequest;
 import com.frantsys.knowledge_repository.modules.User.mapper.UserMapper;
 import com.frantsys.knowledge_repository.modules.User.model.User;
-import com.frantsys.knowledge_repository.modules.User.model.UserRole;
 import com.frantsys.knowledge_repository.modules.User.repository.UserRepository;
 
 import lombok.AllArgsConstructor;
 
 @Service
 @AllArgsConstructor  
-public class UserService {
+public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
-
-    @Transactional
-    public UserResponse createUser(UserCreateRequest request) {
-
-        User user = userMapper.toEntity(request);
-
-        String rawPassword = user.getPassword();
-        String encodedPassword = passwordEncoder.encode(rawPassword);
-
-        user.setCreatedAt(LocalDateTime.now());
-        user.setIsActive(true);
-        user.setRole(UserRole.ROLE_STUDENT);
-        user.setPassword(encodedPassword);
-
-        User savedUser = userRepository.save(user);
-
-        return userMapper.toResponse(savedUser);
-
-    }
 
     @Transactional
     public UserResponse updateById(Long id, UserUpdateRequest request) {
@@ -136,20 +115,10 @@ public class UserService {
 
     }
 
-    // Lógica de Login temporária sem JWT
-    @Transactional 
-    public String login(UserLoginRequest request) {
-        
-        User user = userRepository.findByEmail(request.getEmail())
-            .orElseThrow(() -> new RuntimeException("Credenciais inválidas."));
-
-        if(!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Credenciais inválidas.");
-        }
-
-        return "TOKEN_DE_AUTENTICACAO";
-
+    @Override
+    public UserDetails loadUserByUsername(@NonNull String username) throws UsernameNotFoundException {
+        return userRepository.findByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException(username));
     }
 
-    
 }

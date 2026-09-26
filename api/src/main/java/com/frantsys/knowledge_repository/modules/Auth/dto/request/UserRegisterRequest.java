@@ -1,7 +1,8 @@
-package com.frantsys.knowledge_repository.modules.User.dto.request;
+package com.frantsys.knowledge_repository.modules.Auth.dto.request;
 
 import java.time.LocalDate;
 
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserAddressCreateRequest;
 import org.hibernate.validator.constraints.br.CPF;
 
 import jakarta.validation.Valid;
@@ -17,7 +18,7 @@ import lombok.Setter;
 
 @Getter 
 @Setter
-public class UserCreateRequest {
+public class UserRegisterRequest {
 
     @NotBlank(message = "CPF é obrigatório")
     @CPF(message = "CPF deve ser válido")
