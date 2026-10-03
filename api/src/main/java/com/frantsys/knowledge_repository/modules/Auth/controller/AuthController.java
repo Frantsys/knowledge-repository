@@ -37,7 +37,7 @@ public class AuthController {
 
         UserLoginResponse response = authService.userLogin(request);
 
-        return ResponseEntity.status(HttpStatus.OK).body(response);
+        return ResponseEntity.ok(response);
 
     }
 
