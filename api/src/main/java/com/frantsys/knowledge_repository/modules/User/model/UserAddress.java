@@ -12,7 +12,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserAddress {
-    
+
     private String country;
     private String state;
     private String city;

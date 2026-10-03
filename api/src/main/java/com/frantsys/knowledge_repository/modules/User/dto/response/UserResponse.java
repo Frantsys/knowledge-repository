@@ -1,22 +1,20 @@
 package com.frantsys.knowledge_repository.modules.User.dto.response;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-
-import com.frantsys.knowledge_repository.modules.User.dto.request.UserAddressCreateRequest;
 import com.frantsys.knowledge_repository.modules.User.model.UserRole;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserResponse {
-    
+
     private Long id;
     private String cpf;
     private String firstName;
@@ -25,7 +23,7 @@ public class UserResponse {
     private String phoneNumber;
     private String gender;
     private String course;
-    private UserAddressCreateRequest address;
+    private UserAddressResponse address;
     private LocalDate birthDate;
     private UserRole role;
     private LocalDateTime createdAt;

@@ -5,5 +5,5 @@ public enum UserRole {
     ROLE_STUDENT,
     ROLE_MODERATOR,
     ROLE_ADMIN
-    
+
 }

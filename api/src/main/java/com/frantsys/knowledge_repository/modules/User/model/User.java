@@ -1,12 +1,5 @@
 package com.frantsys.knowledge_repository.modules.User.model;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
-
-import org.hibernate.validator.constraints.br.CPF;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -20,26 +13,31 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-@Entity 
-@Table (name = "users")
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
+
+@Entity
+@Table(name = "users")
 @Getter
-@Setter 
-@NoArgsConstructor 
-@AllArgsConstructor  
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class User implements UserDetails {
-    
-    @Id 
+
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
-    @CPF
     private String cpf;
-    
+
     @Column(nullable = false, name = "first_name")
     private String firstName;
 
@@ -61,22 +59,26 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String course;
 
-    @Embedded 
-    @Column(nullable = false)
+    @Embedded
     private UserAddress address;
 
     @Column(nullable = false, name = "birth_date")
     private LocalDate birthDate;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
 
+    @CreationTimestamp
     @Column(nullable = false, name = "created_at")
     private LocalDateTime createdAt;
 
     @Column(nullable = false, name = "is_active")
     private Boolean isActive;
+
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -88,23 +90,10 @@ public class User implements UserDetails {
         return this.email;
     }
 
-    @Override
-    public boolean isAccountNonExpired() {
-        return UserDetails.super.isAccountNonExpired();
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return UserDetails.super.isAccountNonLocked();
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return UserDetails.super.isCredentialsNonExpired();
-    }
-
+    // Usuários desativados não conseguem autenticar
     @Override
     public boolean isEnabled() {
-        return UserDetails.super.isEnabled();
+        return Boolean.TRUE.equals(this.isActive);
     }
+
 }
