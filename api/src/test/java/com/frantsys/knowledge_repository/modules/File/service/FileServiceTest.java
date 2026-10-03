@@ -1,5 +1,6 @@
 package com.frantsys.knowledge_repository.modules.File.service;
 
+import com.frantsys.knowledge_repository.exception.ResourceNotFoundException;
 import com.frantsys.knowledge_repository.modules.File.dto.request.FileCreateRequest;
 import com.frantsys.knowledge_repository.modules.File.dto.request.FileUpdateActivationRequest;
 import com.frantsys.knowledge_repository.modules.File.dto.request.FileUpdateRequest;
@@ -10,7 +11,8 @@ import com.frantsys.knowledge_repository.modules.File.model.File;
 import com.frantsys.knowledge_repository.modules.File.repository.FileRepository;
 import com.frantsys.knowledge_repository.modules.Material.model.Material;
 import com.frantsys.knowledge_repository.modules.Material.repository.MaterialRepository;
-
+import com.frantsys.knowledge_repository.modules.User.model.User;
+import com.frantsys.knowledge_repository.modules.User.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,6 +42,9 @@ class FileServiceTest {
     private MaterialRepository materialRepository;
 
     @Mock
+    private UserRepository userRepository;
+
+    @Mock
     private FileMapper fileMapper;
 
     @InjectMocks
@@ -50,61 +55,63 @@ class FileServiceTest {
     @BeforeEach
     void setUp() {
         existingFile = new File();
-        existingFile.setPath_id(1L);
-        existingFile.setSize("100KB");
-        existingFile.setType("txt");
+        existingFile.setPathId(1L);
+        existingFile.setSize("10KB");
+        existingFile.setType("pdf");
         existingFile.setReadOnly(false);
-        existingFile.setName("original.txt");
+        existingFile.setName("old-name.pdf");
     }
 
     @Test
-    @DisplayName("createFile should link the material and copy its createdBy")
-    void createFile_shouldLinkMaterialAndSetDefaults() {
+    @DisplayName("create should link the material, set the author as creator and activate the file")
+    void create_shouldLinkMaterialAndSetDefaults() {
+        User author = new User();
+        author.setFirstName("Anna");
+        author.setLastName("Smith");
+
         FileCreateRequest request = new FileCreateRequest();
         request.setMaterialId(10L);
 
-        File mappedFile = new File();
         Material material = new Material();
-        material.setCreatedBy("prof.silva");
-
-        when(fileMapper.toEntity(request)).thenReturn(mappedFile);
-        when(materialRepository.getReferenceById(10L)).thenReturn(material);
-        when(fileRepository.save(mappedFile)).thenReturn(mappedFile);
-        when(fileMapper.toResponse(mappedFile)).thenReturn(new FileResponse());
-
-        fileService.createFile(request);
-
-        assertThat(mappedFile.getMaterial()).isSameAs(material);
-        assertEquals("prof.silva", mappedFile.getCreatedBy());
-        assertThat(mappedFile.getIsActive()).isTrue();
-        assertThat(mappedFile.getCreatedAt()).isNotNull();
-    }
-
-    @Test
-    @DisplayName("createFile should not look up a material when materialId is null")
-    void createFile_shouldSkipMaterialLookupWhenMaterialIdIsNull() {
-        FileCreateRequest request = new FileCreateRequest();
-
         File mappedFile = new File();
+        FileResponse response = new FileResponse();
+
+        when(userRepository.findByEmail("anna@example.com")).thenReturn(Optional.of(author));
+        when(materialRepository.findById(10L)).thenReturn(Optional.of(material));
         when(fileMapper.toEntity(request)).thenReturn(mappedFile);
         when(fileRepository.save(mappedFile)).thenReturn(mappedFile);
-        when(fileMapper.toResponse(mappedFile)).thenReturn(new FileResponse());
+        when(fileMapper.toResponse(mappedFile)).thenReturn(response);
 
-        fileService.createFile(request);
+        FileResponse result = fileService.create("anna@example.com", request);
 
-        verify(materialRepository, never()).getReferenceById(any());
-        assertThat(mappedFile.getMaterial()).isNull();
+        assertThat(result).isSameAs(response);
+        assertThat(mappedFile.getMaterial()).isSameAs(material);
+        assertEquals("Anna Smith", mappedFile.getCreatedBy());
+        assertThat(mappedFile.getIsActive()).isTrue();
     }
 
     @Test
-    @DisplayName("updateById should update path_id, readOnly and name as requested")
-    void updateById_shouldUpdatePathReadOnlyAndName() {
+    @DisplayName("create should throw an exception when the material does not exist")
+    void create_shouldThrowExceptionWhenMaterialNotFound() {
+        FileCreateRequest request = new FileCreateRequest();
+        request.setMaterialId(99L);
+
+        when(userRepository.findByEmail("anna@example.com")).thenReturn(Optional.of(new User()));
+        when(materialRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> fileService.create("anna@example.com", request));
+
+        verify(fileRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("updateById should update pathId, readOnly and name as requested")
+    void updateById_shouldUpdateProvidedFields() {
         FileUpdateRequest request = new FileUpdateRequest();
-        request.setPath_id(99L);
-        request.setSize("2MB");
-        request.setType("pdf");
+        request.setPathId(2L);
         request.setReadOnly(true);
-        request.setName("report.pdf");
+        request.setName("new-name.pdf");
 
         when(fileRepository.findById(1L)).thenReturn(Optional.of(existingFile));
         when(fileRepository.save(existingFile)).thenReturn(existingFile);
@@ -112,19 +119,20 @@ class FileServiceTest {
 
         fileService.updateById(1L, request);
 
-        assertEquals(99L, existingFile.getPath_id());
+        assertEquals(2L, existingFile.getPathId());
         assertThat(existingFile.getReadOnly()).isTrue();
-        assertEquals("report.pdf", existingFile.getName());
-        assertEquals("2MB", existingFile.getSize());
+        assertEquals("new-name.pdf", existingFile.getName());
+        assertEquals("10KB", existingFile.getSize());
         assertEquals("pdf", existingFile.getType());
+        verify(fileRepository).save(existingFile);
     }
 
     @Test
     @DisplayName("updateById should throw an exception when the file does not exist")
-    void updateById_shouldThrowExceptionWhenFileNotFound() {
+    void updateById_shouldThrowExceptionWhenNotFound() {
         when(fileRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class,
+        assertThrows(ResourceNotFoundException.class,
                 () -> fileService.updateById(99L, new FileUpdateRequest()));
     }
 
@@ -142,10 +150,10 @@ class FileServiceTest {
 
     @Test
     @DisplayName("findById should throw an exception when the file does not exist")
-    void findById_shouldThrowExceptionWhenFileNotFound() {
+    void findById_shouldThrowExceptionWhenNotFound() {
         when(fileRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> fileService.findById(99L));
+        assertThrows(ResourceNotFoundException.class, () -> fileService.findById(99L));
     }
 
     @Test
@@ -179,6 +187,7 @@ class FileServiceTest {
         request.setIsActive(false);
 
         when(fileRepository.findById(1L)).thenReturn(Optional.of(existingFile));
+        when(fileRepository.save(existingFile)).thenReturn(existingFile);
         when(fileMapper.toResponse(existingFile)).thenReturn(new FileResponse());
 
         fileService.updateActivationById(1L, request);

@@ -1,5 +1,6 @@
 package com.frantsys.knowledge_repository.modules.Auth.service;
 
+import com.frantsys.knowledge_repository.exception.ConflictException;
 import com.frantsys.knowledge_repository.modules.Auth.dto.request.UserLoginRequest;
 import com.frantsys.knowledge_repository.modules.Auth.dto.request.UserRegisterRequest;
 import com.frantsys.knowledge_repository.modules.Auth.dto.response.UserLoginResponse;
@@ -8,7 +9,6 @@ import com.frantsys.knowledge_repository.modules.User.mapper.UserMapper;
 import com.frantsys.knowledge_repository.modules.User.model.User;
 import com.frantsys.knowledge_repository.modules.User.model.UserRole;
 import com.frantsys.knowledge_repository.modules.User.repository.UserRepository;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -56,6 +57,7 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         registerRequest = new UserRegisterRequest();
+        registerRequest.setCpf("529.982.247-25");
         registerRequest.setEmail("student@example.com");
         registerRequest.setPassword("password123");
         registerRequest.setFirstName("Anna");
@@ -83,6 +85,26 @@ class AuthServiceTest {
 
         verify(passwordEncoder).encode("password123");
         verify(userRepository).save(user);
+    }
+
+    @Test
+    @DisplayName("userRegister should throw ConflictException when the e-mail is already registered")
+    void userRegister_shouldThrowExceptionWhenEmailAlreadyExists() {
+        when(userRepository.existsByEmail("student@example.com")).thenReturn(true);
+
+        assertThrows(ConflictException.class, () -> authService.userRegister(registerRequest));
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("userRegister should throw ConflictException when the CPF is already registered")
+    void userRegister_shouldThrowExceptionWhenCpfAlreadyExists() {
+        when(userRepository.existsByCpf("529.982.247-25")).thenReturn(true);
+
+        assertThrows(ConflictException.class, () -> authService.userRegister(registerRequest));
+
+        verify(userRepository, never()).save(any());
     }
 
     @Test

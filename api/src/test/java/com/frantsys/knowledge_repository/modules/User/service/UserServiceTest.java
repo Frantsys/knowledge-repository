@@ -1,6 +1,9 @@
 package com.frantsys.knowledge_repository.modules.User.service;
 
+import com.frantsys.knowledge_repository.exception.BusinessException;
+import com.frantsys.knowledge_repository.exception.ResourceNotFoundException;
 import com.frantsys.knowledge_repository.modules.User.dto.request.UserAddressCreateRequest;
+import com.frantsys.knowledge_repository.modules.User.dto.request.UserFilterRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdateActivationRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdatePasswordRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdateRequest;
@@ -11,7 +14,6 @@ import com.frantsys.knowledge_repository.modules.User.model.User;
 import com.frantsys.knowledge_repository.modules.User.model.UserAddress;
 import com.frantsys.knowledge_repository.modules.User.model.UserRole;
 import com.frantsys.knowledge_repository.modules.User.repository.UserRepository;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -73,8 +76,9 @@ class UserServiceTest {
 
         UserUpdateRequest request = new UserUpdateRequest();
         request.setFirstName("John");
-        request.setLastname("Doe");
+        request.setLastName("Doe");
         request.setPhoneNumber("11999990000");
+        request.setCourse("Computer Science");
         request.setAddress(addressRequest);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
@@ -88,8 +92,22 @@ class UserServiceTest {
         assertEquals("John", user.getFirstName());
         assertEquals("Doe", user.getLastName());
         assertEquals("11999990000", user.getPhoneNumber());
+        assertEquals("Computer Science", user.getCourse());
         assertEquals(addressEntity, user.getAddress());
         verify(userRepository).save(user);
+    }
+
+    @Test
+    @DisplayName("updateById should keep the current values when the request is empty")
+    void updateById_shouldKeepCurrentValuesWhenRequestIsEmpty() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userMapper.toResponse(user)).thenReturn(newUserResponse());
+
+        userService.updateById(1L, new UserUpdateRequest());
+
+        assertEquals("Anna", user.getFirstName());
+        assertEquals("Smith", user.getLastName());
     }
 
     @Test
@@ -97,7 +115,7 @@ class UserServiceTest {
     void updateById_shouldThrowExceptionWhenUserNotFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class,
+        assertThrows(ResourceNotFoundException.class,
                 () -> userService.updateById(99L, new UserUpdateRequest()));
 
         verify(userRepository, never()).save(any());
@@ -150,7 +168,22 @@ class UserServiceTest {
     void findById_shouldThrowExceptionWhenUserNotFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> userService.findById(99L));
+        assertThrows(ResourceNotFoundException.class, () -> userService.findById(99L));
+    }
+
+    @Test
+    @DisplayName("filter should query the repository with a specification and map the results")
+    @SuppressWarnings("unchecked")
+    void filter_shouldReturnMappedUsers() {
+        UserFilterRequest filter = new UserFilterRequest("Anna", UserRole.ROLE_STUDENT, null, true, null, null);
+        UserResponse response = newUserResponse();
+
+        when(userRepository.findAll(any(Specification.class))).thenReturn(List.of(user));
+        when(userMapper.toResponse(user)).thenReturn(response);
+
+        List<UserResponse> result = userService.filter(filter);
+
+        assertThat(result).containsExactly(response);
     }
 
     @Test
@@ -160,12 +193,11 @@ class UserServiceTest {
         request.setCurrentPassword("old-password");
         request.setNewPassword("new-password-123");
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("student@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("old-password", "encoded-old-password")).thenReturn(true);
         when(passwordEncoder.encode("new-password-123")).thenReturn("encoded-new-password");
-        when(userRepository.save(user)).thenReturn(user);
 
-        userService.updatePassword(1L, request);
+        userService.updatePassword("student@example.com", request);
 
         assertEquals("encoded-new-password", user.getPassword());
         verify(userRepository).save(user);
@@ -178,10 +210,11 @@ class UserServiceTest {
         request.setCurrentPassword("wrong-password");
         request.setNewPassword("new-password-123");
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("student@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong-password", "encoded-old-password")).thenReturn(false);
 
-        assertThrows(RuntimeException.class, () -> userService.updatePassword(1L, request));
+        assertThrows(BusinessException.class,
+                () -> userService.updatePassword("student@example.com", request));
 
         verify(userRepository, never()).save(any());
     }
@@ -193,6 +226,7 @@ class UserServiceTest {
         request.setIsActive(false);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
         when(userMapper.toResponse(user)).thenReturn(newUserResponse());
 
         userService.updateActivationById(1L, request);
