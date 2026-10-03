@@ -3,11 +3,11 @@ package com.frantsys.knowledge_repository.modules.File.dto.request;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter 
-@Setter 
+@Getter
+@Setter
 public class FileUpdateRequest {
-    
-    private Long path_id;
+
+    private Long pathId;
     private String size;
     private String type;
     private Boolean readOnly;

@@ -14,7 +14,8 @@ public class MaterialSummaryResponse {
     private String body;
     private String subject;
     private String course;
-    private Long likes;
+    private Integer likes;
+    private Integer views;
     private LocalDateTime updatedAt;
     private String createdBy;
     private LocalDateTime createdAt;

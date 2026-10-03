@@ -16,5 +16,6 @@ public class FileSummaryResponse {
     private String name;
     private String createdBy;
     private LocalDateTime createdAt;
+    private Boolean isActive;
 
 }

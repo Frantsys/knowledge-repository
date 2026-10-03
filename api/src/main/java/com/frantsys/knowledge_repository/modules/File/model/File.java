@@ -1,9 +1,6 @@
 package com.frantsys.knowledge_repository.modules.File.model;
 
-import java.time.LocalDateTime;
-
 import com.frantsys.knowledge_repository.modules.Material.model.Material;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -17,16 +14,19 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
-@Entity 
+import java.time.LocalDateTime;
+
+@Entity
 @Table(name = "files")
-@Getter 
-@Setter 
-@AllArgsConstructor 
-@NoArgsConstructor 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class File {
-    
-    @Id 
+
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -34,8 +34,8 @@ public class File {
     @JoinColumn(nullable = false, name = "material_id")
     private Material material;
 
-    @Column(nullable = false)
-    private Long path_id;
+    @Column(nullable = false, name = "path_id")
+    private Long pathId;
 
     @Column(nullable = false)
     private String size;
@@ -52,6 +52,7 @@ public class File {
     @Column(nullable = false, name = "created_by")
     private String createdBy;
 
+    @CreationTimestamp
     @Column(nullable = false, name = "created_at")
     private LocalDateTime createdAt;
 

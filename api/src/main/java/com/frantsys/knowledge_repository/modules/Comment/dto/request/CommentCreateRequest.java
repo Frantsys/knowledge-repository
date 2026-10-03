@@ -6,15 +6,15 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter 
-@Setter 
+@Getter
+@Setter
 public class CommentCreateRequest {
 
     @NotNull(message = "Material não pode ser nulo")
     private Long materialId;
 
     @NotBlank(message = "O comentário é obrigatório")
-    @Size(min = 1, max = 254, message = "O comentário deve ter entre 1 a 254 caracteres")
+    @Size(max = 254, message = "O comentário deve ter no máximo 254 caracteres")
     private String body;
 
 }

@@ -1,21 +1,23 @@
 package com.frantsys.knowledge_repository.modules.File.dto.response;
 
-import java.time.LocalDateTime;
-
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter 
-@Setter 
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
 public class FileResponse {
-    
+
     private Long id;
-    private Long path_id;
+    private Long materialId;
+    private Long pathId;
     private String size;
     private String type;
     private Boolean readOnly;
     private String name;
     private String createdBy;
     private LocalDateTime createdAt;
+    private Boolean isActive;
 
 }

@@ -1,24 +1,24 @@
 package com.frantsys.knowledge_repository.modules.Material.dto.response;
 
-import java.time.LocalDateTime;
-
-import com.frantsys.knowledge_repository.modules.User.dto.response.UserResponse;
-
+import com.frantsys.knowledge_repository.modules.User.dto.response.UserSummaryResponse;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter 
-@Setter 
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
 public class MaterialResponse {
-    
+
     private Long id;
     private Long userId;
-    private UserResponse user;
+    private UserSummaryResponse user;
     private String title;
     private String body;
     private String subject;
     private String course;
-    private Long likes;
+    private Integer likes;
+    private Integer views;
     private LocalDateTime updatedAt;
     private String createdBy;
     private LocalDateTime createdAt;
