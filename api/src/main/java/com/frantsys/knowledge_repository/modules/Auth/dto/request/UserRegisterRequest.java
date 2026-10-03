@@ -1,10 +1,6 @@
 package com.frantsys.knowledge_repository.modules.Auth.dto.request;
 
-import java.time.LocalDate;
-
 import com.frantsys.knowledge_repository.modules.User.dto.request.UserAddressCreateRequest;
-import org.hibernate.validator.constraints.br.CPF;
-
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -12,18 +8,19 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.validator.constraints.br.CPF;
 
-@Getter 
+import java.time.LocalDate;
+
+@Getter
 @Setter
 public class UserRegisterRequest {
 
     @NotBlank(message = "CPF é obrigatório")
     @CPF(message = "CPF deve ser válido")
-    @Size(min = 14, max = 14, message = "CPF deve ter 11 números")
-    @Pattern(regexp = "^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$", message = "CPF inválido")
+    @Pattern(regexp = "^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$", message = "CPF deve estar no formato 000.000.000-00")
     private String cpf;
 
     @NotBlank(message = "Nome é obrigatório")
@@ -39,7 +36,7 @@ public class UserRegisterRequest {
     private String email;
 
     @NotBlank(message = "Senha é obrigatória")
-    @Size(min = 8, max = 128, message = "Senha deve ter no mínimo 8 caracteres")
+    @Size(min = 8, max = 128, message = "Senha deve ter entre 8 e 128 caracteres")
     private String password;
 
     @NotBlank(message = "Telefone é obrigatório")
@@ -52,11 +49,11 @@ public class UserRegisterRequest {
     private String course;
 
     @NotNull(message = "Endereço é obrigatório")
-    @Valid 
+    @Valid
     private UserAddressCreateRequest address;
 
     @NotNull(message = "Data de nascimento é obrigatória")
     @Past(message = "Data de nascimento deve estar no passado")
     private LocalDate birthDate;
-    
+
 }

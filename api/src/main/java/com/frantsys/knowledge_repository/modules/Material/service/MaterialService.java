@@ -1,63 +1,39 @@
 package com.frantsys.knowledge_repository.modules.Material.service;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
-import com.frantsys.knowledge_repository.modules.Material.dto.response.MaterialSummaryResponse;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
+import com.frantsys.knowledge_repository.exception.ResourceNotFoundException;
 import com.frantsys.knowledge_repository.modules.Material.dto.request.MaterialCreateRequest;
-import com.frantsys.knowledge_repository.modules.Material.dto.response.MaterialResponse;
 import com.frantsys.knowledge_repository.modules.Material.dto.request.MaterialUpdateActivationRequest;
 import com.frantsys.knowledge_repository.modules.Material.dto.request.MaterialUpdateRequest;
+import com.frantsys.knowledge_repository.modules.Material.dto.response.MaterialResponse;
+import com.frantsys.knowledge_repository.modules.Material.dto.response.MaterialSummaryResponse;
 import com.frantsys.knowledge_repository.modules.Material.mapper.MaterialMapper;
 import com.frantsys.knowledge_repository.modules.Material.model.Material;
 import com.frantsys.knowledge_repository.modules.Material.repository.MaterialRepository;
-import lombok.AllArgsConstructor;
+import com.frantsys.knowledge_repository.modules.User.model.User;
+import com.frantsys.knowledge_repository.modules.User.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-@Service 
-@AllArgsConstructor 
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
 public class MaterialService {
-    
+
     private final MaterialRepository materialRepository;
+    private final UserRepository userRepository;
     private final MaterialMapper materialMapper;
-
-    @Transactional
-    public MaterialResponse createMaterial(MaterialCreateRequest request) {
-
-        Material material = materialMapper.toEntity(request);
-
-        material.setLikes(0);
-        material.setViews(0);
-        material.setUpdatedAt(null);
-        material.setCreatedAt(LocalDateTime.now());
-        material.setIsActive(true);
-
-        Material savedMaterial = materialRepository.save(material);
-
-        return materialMapper.toResponse(savedMaterial);
-
-    }
-
-    @Transactional(readOnly = true)
-    public MaterialResponse findById(Long id) {
-
-        Material material = materialRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Material não encontrado com ID: " + id));
-
-        return materialMapper.toResponse(material);
-
-    }
 
     @Transactional(readOnly = true)
     public List<MaterialResponse> findAll() {
 
         return materialRepository.findAll()
-            .stream()
-            .map(materialMapper::toResponse)
-            .toList();
-        
+                .stream()
+                .map(materialMapper::toResponse)
+                .toList();
+
     }
 
     @Transactional(readOnly = true)
@@ -70,27 +46,57 @@ public class MaterialService {
 
     }
 
-    @Transactional 
+    @Transactional(readOnly = true)
+    public MaterialResponse findById(Long id) {
+
+        Material material = findMaterialById(id);
+
+        return materialMapper.toResponse(material);
+
+    }
+
+    @Transactional
+    public MaterialResponse create(String authorEmail, MaterialCreateRequest request) {
+
+        User author = userRepository.findByEmail(authorEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com e-mail: " + authorEmail));
+
+        Material material = materialMapper.toEntity(request);
+
+        material.setUser(author);
+        material.setCreatedBy(author.getFullName());
+        material.setLikes(0);
+        material.setViews(0);
+        material.setIsActive(true);
+
+        Material savedMaterial = materialRepository.save(material);
+
+        return materialMapper.toResponse(savedMaterial);
+
+    }
+
+    @Transactional
     public MaterialResponse updateById(Long id, MaterialUpdateRequest request) {
 
-        Material material = materialRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Material não encontrado com ID: " + id));
-        
-        if(request.getTitle() != null && !request.getTitle().isBlank()) {
+        Material material = findMaterialById(id);
+
+        if (request.getTitle() != null && !request.getTitle().isBlank()) {
             material.setTitle(request.getTitle());
         }
 
-        if(request.getBody() != null && !request.getBody().isBlank()) {
+        if (request.getBody() != null && !request.getBody().isBlank()) {
             material.setBody(request.getBody());
         }
 
-        if(request.getSubject() != null && !request.getSubject().isBlank()) {
+        if (request.getSubject() != null && !request.getSubject().isBlank()) {
             material.setSubject(request.getSubject());
         }
 
-        if(request.getCourse() != null && !request.getCourse().isBlank()) {
+        if (request.getCourse() != null && !request.getCourse().isBlank()) {
             material.setCourse(request.getCourse());
         }
+
+        material.setUpdatedAt(LocalDateTime.now());
 
         Material updatedMaterial = materialRepository.save(material);
 
@@ -101,17 +107,21 @@ public class MaterialService {
     @Transactional
     public MaterialResponse updateActivationById(Long id, MaterialUpdateActivationRequest request) {
 
-        Material material = materialRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Material não encontrado com ID: " + id));
-        
+        Material material = findMaterialById(id);
+
         material.setIsActive(request.getIsActive());
 
-        materialRepository.save(material);
+        Material updatedMaterial = materialRepository.save(material);
 
-        return materialMapper.toResponse(material);
+        return materialMapper.toResponse(updatedMaterial);
 
     }
 
+    private Material findMaterialById(Long id) {
 
+        return materialRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Material não encontrado com ID: " + id));
+
+    }
 
 }

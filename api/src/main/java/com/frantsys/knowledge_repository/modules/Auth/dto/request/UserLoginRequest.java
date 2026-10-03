@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter 
+@Getter
 @Setter
 public class UserLoginRequest {
 
@@ -15,7 +15,7 @@ public class UserLoginRequest {
     private String email;
 
     @NotBlank(message = "Senha é obrigatória")
-    @Size(min = 8, max = 128, message = "Senha deve ter no mínimo 8 caracteres")
+    @Size(min = 8, max = 128, message = "Senha deve ter entre 8 e 128 caracteres")
     private String password;
-    
+
 }

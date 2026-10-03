@@ -5,15 +5,15 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter 
-@Setter 
+@Getter
+@Setter
 public class FileCreateRequest {
-    
+
     @NotNull(message = "Material não pode ser nulo")
     private Long materialId;
 
     @NotNull(message = "Arquivo não pode ser nulo")
-    private Long path_id;
+    private Long pathId;
 
     @NotBlank(message = "Tamanho é obrigatório")
     private String size;
@@ -21,13 +21,10 @@ public class FileCreateRequest {
     @NotBlank(message = "Tipo é obrigatório")
     private String type;
 
-    @NotNull(message = "Definição de leitura não pode ser nulo")
+    @NotNull(message = "Definição de leitura não pode ser nula")
     private Boolean readOnly;
 
-    @NotNull(message = "Nome é obrigatório")
+    @NotBlank(message = "Nome é obrigatório")
     private String name;
-
-    @NotBlank(message = "Criador é obrigatório")
-    private String createdBy;
 
 }
