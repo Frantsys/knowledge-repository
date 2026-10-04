@@ -544,7 +544,7 @@ export default function LoginPage() {
                             Ainda não tem uma conta?{" "}
 
                             <Link
-                                href="/cadastro"
+                                href="/signup"
                                 className="
                                     font-medium
                                     text-purple-600

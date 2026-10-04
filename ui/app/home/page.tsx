@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
+
 import {
     ArrowRight,
     BookOpen,
     FileText,
 } from "lucide-react";
+
 import Navbar from "@/components/navbar";
 
 const materiaisAcessados = [
@@ -63,145 +66,156 @@ const novosMateriais = [
 export default function HomePage() {
     return (
         <div className="min-h-screen bg-[#f8f7fc]">
-            {/* NAVBAR */}
+
+            {/* =====================================================
+                NAVBAR
+            ====================================================== */}
+
             <Navbar />
 
-            {/* CONTEÚDO */}
+
+            {/* =====================================================
+                CONTEÚDO
+            ====================================================== */}
+
             <main>
+
                 <div
                     className="
                         mx-auto
                         w-full
                         max-w-[1250px]
-
                         px-5
                         py-8
-
                         sm:px-8
                         sm:py-10
-
                         lg:px-10
                         lg:py-12
                     "
                 >
-                    {/* ============================================ */}
-                    {/* ÚLTIMOS MATERIAIS */}
-                    {/* ============================================ */}
+
+                    {/* =================================================
+                        ÚLTIMOS MATERIAIS ACESSADOS
+                    ================================================== */}
 
                     <section>
+
+                        {/* Cabeçalho */}
+
                         <div className="mb-6 flex items-center justify-between">
+
                             <h1
                                 className="
                                     text-lg
                                     font-bold
                                     text-[#21005f]
-
                                     sm:text-xl
                                 "
                             >
                                 Meus últimos materiais acessados
                             </h1>
 
-                            <button
+
+                            {/* Desktop */}
+
+                            <Link
+                                href="/meusmateriais"
                                 className="
                                     hidden
                                     items-center
                                     gap-1
-
                                     text-xs
                                     font-medium
                                     text-purple-600
-
                                     transition
                                     hover:text-purple-800
-
                                     sm:flex
                                 "
                             >
                                 Ver todos
+
                                 <ArrowRight size={14} />
-                            </button>
+                            </Link>
+
                         </div>
+
+
+                        {/* Cards */}
 
                         <div
                             className="
                                 grid
                                 grid-cols-1
                                 gap-5
-
                                 sm:grid-cols-2
-
                                 lg:grid-cols-3
                             "
                         >
+
                             {materiaisAcessados.map((material) => (
-                                <article
+
+                                <Link
                                     key={material.id}
+                                    href={`/meusmateriais/${material.id}`}
                                     className="
                                         group
+                                        block
                                         cursor-pointer
                                         overflow-hidden
-
                                         rounded-xl
                                         bg-white
-
                                         shadow-sm
-
                                         transition
-
                                         hover:-translate-y-1
                                         hover:shadow-lg
                                     "
                                 >
-                                    {/* IMAGEM */}
+
+                                    {/* Imagem */}
 
                                     <div
                                         className="
                                             relative
                                             h-[150px]
-
                                             overflow-hidden
-
                                             bg-purple-100
-
                                             sm:h-[145px]
                                         "
                                     >
+
                                         <img
                                             src={material.image}
                                             alt={material.title}
                                             className="
                                                 h-full
                                                 w-full
-
                                                 object-cover
-
                                                 transition
                                                 duration-300
-
                                                 group-hover:scale-105
                                             "
                                         />
+
                                     </div>
 
-                                    {/* PARTE ROXA */}
+
+                                    {/* Parte roxa */}
 
                                     <div
                                         className="
                                             flex
                                             h-[82px]
-
                                             items-end
-
                                             bg-gradient-to-br
                                             from-[#7731e8]
                                             to-[#6d2ae0]
-
                                             px-4
                                             py-3
                                         "
                                     >
+
                                         <div className="flex items-center gap-2">
+
                                             <BookOpen
                                                 size={16}
                                                 className="text-white/80"
@@ -210,7 +224,6 @@ export default function HomePage() {
                                             <h2
                                                 className="
                                                     line-clamp-1
-
                                                     text-xs
                                                     font-medium
                                                     text-white
@@ -218,136 +231,150 @@ export default function HomePage() {
                                             >
                                                 {material.title}
                                             </h2>
+
                                         </div>
+
                                     </div>
-                                </article>
+
+                                </Link>
+
                             ))}
+
                         </div>
 
-                        {/* MOBILE */}
 
-                        <button
+                        {/* Mobile */}
+
+                        <Link
+                            href="/meusmateriais"
                             className="
                                 mt-4
                                 flex
-
                                 items-center
                                 gap-1
-
                                 text-xs
                                 font-medium
                                 text-purple-600
-
                                 sm:hidden
                             "
                         >
                             Ver todos
+
                             <ArrowRight size={14} />
-                        </button>
+                        </Link>
+
                     </section>
 
-                    {/* ============================================ */}
-                    {/* NOVOS MATERIAIS */}
-                    {/* ============================================ */}
+
+                    {/* =================================================
+                        NOVOS MATERIAIS
+                    ================================================== */}
 
                     <section className="mt-10 sm:mt-12">
+
+                        {/* Cabeçalho */}
+
                         <div className="mb-5 flex items-center justify-between">
+
                             <h2
                                 className="
                                     text-base
                                     font-bold
                                     text-[#21005f]
-
                                     sm:text-lg
                                 "
                             >
                                 Novos materiais postados
                             </h2>
 
-                            <button
+
+                            {/* Desktop */}
+
+                            <Link
+                                href="/explorar"
                                 className="
                                     hidden
                                     items-center
                                     gap-1
-
                                     text-xs
                                     font-medium
                                     text-purple-600
-
                                     transition
                                     hover:text-purple-800
-
                                     sm:flex
                                 "
                             >
                                 Explorar
+
                                 <ArrowRight size={14} />
-                            </button>
+                            </Link>
+
                         </div>
+
+
+                        {/* Cards */}
 
                         <div
                             className="
                                 grid
                                 grid-cols-1
                                 gap-4
-
                                 sm:grid-cols-2
-
                                 lg:grid-cols-4
                             "
                         >
+
                             {novosMateriais.map((material) => (
-                                <article
+
+                                <Link
                                     key={material.id}
+                                    href={`/meusmateriais/${material.id}`}
                                     className="
                                         group
+                                        block
                                         cursor-pointer
-
                                         overflow-hidden
                                         rounded-xl
-
                                         border
                                         border-purple-100
-
                                         bg-white
-
                                         shadow-[0_3px_12px_rgba(115,45,220,0.12)]
-
                                         transition
-
                                         hover:-translate-y-1
-
-                                        hover:shadow-[0_6px_20px_rgba(115,45px,220,0.18)]
+                                        hover:shadow-[0_6px_20px_rgba(115,45,220,0.18)]
                                     "
                                 >
-                                    {/* USUÁRIO */}
+
+                                    {/* =================================================
+                                        USUÁRIO
+                                    ================================================== */}
 
                                     <div
                                         className="
                                             flex
                                             items-center
                                             gap-2
-
                                             px-3
                                             pt-3
                                         "
                                     >
+
+                                        {/* Avatar */}
+
                                         <div
                                             className="
                                                 flex
                                                 h-8
                                                 w-8
                                                 shrink-0
-
                                                 items-center
                                                 justify-center
-
                                                 overflow-hidden
                                                 rounded-full
-
                                                 bg-purple-100
                                             "
                                         >
+
                                             <span
                                                 className="
                                                     text-xs
@@ -357,13 +384,17 @@ export default function HomePage() {
                                             >
                                                 A
                                             </span>
+
                                         </div>
 
+
+                                        {/* Informações */}
+
                                         <div className="min-w-0">
+
                                             <p
                                                 className="
                                                     truncate
-
                                                     text-[9px]
                                                     font-semibold
                                                     text-gray-800
@@ -375,44 +406,48 @@ export default function HomePage() {
                                             <p
                                                 className="
                                                     truncate
-
                                                     text-[8px]
                                                     text-gray-400
                                                 "
                                             >
                                                 {material.course}
                                             </p>
+
                                         </div>
+
                                     </div>
 
-                                    {/* PREVIEW DO MATERIAL */}
+
+                                    {/* =================================================
+                                        PREVIEW DO MATERIAL
+                                    ================================================== */}
 
                                     <div className="px-3 pb-3 pt-2">
+
                                         <div
                                             className="
                                                 relative
-
                                                 h-[125px]
-
                                                 overflow-hidden
-
                                                 rounded-md
-
                                                 bg-[#fdfdfd]
-
                                                 shadow-inner
                                             "
                                         >
+
                                             <div className="px-3 py-2">
+
+                                                {/* Título */}
+
                                                 <div
                                                     className="
                                                         mb-2
-
                                                         flex
                                                         items-center
                                                         gap-1
                                                     "
                                                 >
+
                                                     <FileText
                                                         size={10}
                                                         className="text-purple-600"
@@ -427,7 +462,11 @@ export default function HomePage() {
                                                     >
                                                         {material.title}
                                                     </span>
+
                                                 </div>
+
+
+                                                {/* Descrição */}
 
                                                 <p
                                                     className="
@@ -439,39 +478,58 @@ export default function HomePage() {
                                                     {material.description}
                                                 </p>
 
+
+                                                {/* Linhas */}
+
                                                 <div className="mt-2 space-y-1">
+
                                                     <div className="h-[3px] w-full rounded bg-gray-200" />
+
                                                     <div className="h-[3px] w-[92%] rounded bg-gray-200" />
+
                                                     <div className="h-[3px] w-[96%] rounded bg-gray-200" />
+
                                                     <div className="h-[3px] w-[78%] rounded bg-gray-200" />
+
                                                     <div className="h-[3px] w-[88%] rounded bg-gray-200" />
+
                                                 </div>
+
                                             </div>
+
+
+                                            {/* Fade inferior */}
 
                                             <div
                                                 className="
                                                     pointer-events-none
-
                                                     absolute
                                                     bottom-0
                                                     left-0
                                                     right-0
-
                                                     h-10
-
                                                     bg-gradient-to-t
                                                     from-white
                                                     to-transparent
                                                 "
                                             />
+
                                         </div>
+
                                     </div>
-                                </article>
+
+                                </Link>
+
                             ))}
+
                         </div>
+
                     </section>
+
                 </div>
+
             </main>
+
         </div>
     );
 }

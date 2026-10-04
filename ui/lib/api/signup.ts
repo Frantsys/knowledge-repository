@@ -1,7 +1,7 @@
-const API_URL = "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export async function createUser(data: unknown) {
-  const response = await fetch(`${API_URL}/v1/api/users`, {
+  const response = await fetch(`${API_URL}/v1/api/auth/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
