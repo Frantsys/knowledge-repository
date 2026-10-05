@@ -19,6 +19,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -117,24 +122,24 @@ class MaterialServiceTest {
     @DisplayName("findAll should return every material mapped to MaterialResponse")
     void findAll_shouldReturnMappedMaterials() {
         MaterialResponse response = new MaterialResponse();
-        when(materialRepository.findAll()).thenReturn(List.of(existingMaterial));
+        when(materialRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(existingMaterial)));
         when(materialMapper.toResponse(existingMaterial)).thenReturn(response);
 
-        List<MaterialResponse> result = materialService.findAll();
+        Page<MaterialResponse> result = materialService.findAll(PageRequest.of(0, 10));
 
-        assertThat(result).containsExactly(response);
+        assertThat(result.getContent()).containsExactly(response);
     }
 
     @Test
     @DisplayName("findAllSummary should return every material mapped to MaterialSummaryResponse")
     void findAllSummary_shouldReturnMappedSummaries() {
         MaterialSummaryResponse summary = new MaterialSummaryResponse();
-        when(materialRepository.findAll()).thenReturn(List.of(existingMaterial));
+        when(materialRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(existingMaterial)));
         when(materialMapper.toSummaryResponse(existingMaterial)).thenReturn(summary);
 
-        List<MaterialSummaryResponse> result = materialService.findAllSummary();
+        Page<MaterialSummaryResponse> result = materialService.findAllSummary(PageRequest.of(0, 10));
 
-        assertThat(result).containsExactly(summary);
+        assertThat(result.getContent()).containsExactly(summary);
     }
 
     @Test

@@ -26,6 +26,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -128,13 +133,13 @@ class UserServiceTest {
         UserResponse response1 = newUserResponse();
         UserResponse response2 = newUserResponse();
 
-        when(userRepository.findAll()).thenReturn(List.of(user, otherUser));
+        when(userRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(user, otherUser)));
         when(userMapper.toResponse(user)).thenReturn(response1);
         when(userMapper.toResponse(otherUser)).thenReturn(response2);
 
-        List<UserResponse> result = userService.findAll();
+        Page<UserResponse> result = userService.findAll(PageRequest.of(0, 10));
 
-        assertThat(result).containsExactly(response1, response2);
+        assertThat(result.getContent()).containsExactly(response1, response2);
     }
 
     @Test
@@ -143,12 +148,12 @@ class UserServiceTest {
         UserSummaryResponse summary = new UserSummaryResponse(
                 1L, "Anna", "Smith", "student@example.com", UserRole.ROLE_STUDENT);
 
-        when(userRepository.findAll()).thenReturn(List.of(user));
+        when(userRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(user)));
         when(userMapper.toSummaryResponse(user)).thenReturn(summary);
 
-        List<UserSummaryResponse> result = userService.findAllSummary();
+        Page<UserSummaryResponse> result = userService.findAllSummary(PageRequest.of(0, 10));
 
-        assertThat(result).containsExactly(summary);
+        assertThat(result.getContent()).containsExactly(summary);
     }
 
     @Test
@@ -178,12 +183,12 @@ class UserServiceTest {
         UserFilterRequest filter = new UserFilterRequest("Anna", UserRole.ROLE_STUDENT, null, true, null, null);
         UserResponse response = newUserResponse();
 
-        when(userRepository.findAll(any(Specification.class))).thenReturn(List.of(user));
+        when(userRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(user)));
         when(userMapper.toResponse(user)).thenReturn(response);
 
-        List<UserResponse> result = userService.filter(filter);
+        Page<UserResponse> result = userService.filter(filter, PageRequest.of(0, 10));
 
-        assertThat(result).containsExactly(response);
+        assertThat(result.getContent()).containsExactly(response);
     }
 
     @Test

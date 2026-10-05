@@ -1,6 +1,8 @@
 package com.frantsys.knowledge_repository.modules.File.service;
 
+import com.frantsys.knowledge_repository.exception.BusinessException;
 import com.frantsys.knowledge_repository.exception.ResourceNotFoundException;
+import com.frantsys.knowledge_repository.modules.File.storage.StorageService;
 import com.frantsys.knowledge_repository.modules.File.dto.request.FileCreateRequest;
 import com.frantsys.knowledge_repository.modules.File.dto.request.FileUpdateActivationRequest;
 import com.frantsys.knowledge_repository.modules.File.dto.request.FileUpdateRequest;
@@ -20,6 +22,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -47,6 +55,9 @@ class FileServiceTest {
     @Mock
     private FileMapper fileMapper;
 
+    @Mock
+    private StorageService storageService;
+
     @InjectMocks
     private FileService fileService;
 
@@ -55,16 +66,20 @@ class FileServiceTest {
     @BeforeEach
     void setUp() {
         existingFile = new File();
-        existingFile.setPathId(1L);
+        existingFile.setPathId("key-1");
         existingFile.setSize("10KB");
         existingFile.setType("pdf");
         existingFile.setReadOnly(false);
         existingFile.setName("old-name.pdf");
     }
 
+    private MockMultipartFile pdfUpload() {
+        return new MockMultipartFile("file", "notes.pdf", "application/pdf", "content".getBytes());
+    }
+
     @Test
-    @DisplayName("create should link the material, set the author as creator and activate the file")
-    void create_shouldLinkMaterialAndSetDefaults() {
+    @DisplayName("create should store the upload, fill size/type/pathId from it and activate the file")
+    void create_shouldStoreUploadAndSetDefaults() {
         User author = new User();
         author.setFirstName("Anna");
         author.setLastName("Smith");
@@ -79,15 +94,57 @@ class FileServiceTest {
         when(userRepository.findByEmail("anna@example.com")).thenReturn(Optional.of(author));
         when(materialRepository.findById(10L)).thenReturn(Optional.of(material));
         when(fileMapper.toEntity(request)).thenReturn(mappedFile);
-        when(fileRepository.save(mappedFile)).thenReturn(mappedFile);
+        when(storageService.store(any())).thenReturn("generated-key");
+        when(fileRepository.saveAndFlush(mappedFile)).thenReturn(mappedFile);
         when(fileMapper.toResponse(mappedFile)).thenReturn(response);
 
-        FileResponse result = fileService.create("anna@example.com", request);
+        FileResponse result = fileService.create("anna@example.com", request, pdfUpload());
 
         assertThat(result).isSameAs(response);
         assertThat(mappedFile.getMaterial()).isSameAs(material);
         assertEquals("Anna Smith", mappedFile.getCreatedBy());
+        assertEquals("generated-key", mappedFile.getPathId());
+        assertEquals("7", mappedFile.getSize());
+        assertEquals("application/pdf", mappedFile.getType());
+        assertEquals("notes.pdf", mappedFile.getName());
         assertThat(mappedFile.getIsActive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("create should remove the stored file when saving the metadata fails")
+    void create_shouldDeleteStoredFileWhenSaveFails() {
+        FileCreateRequest request = new FileCreateRequest();
+        request.setMaterialId(10L);
+
+        File mappedFile = new File();
+
+        when(userRepository.findByEmail("anna@example.com")).thenReturn(Optional.of(new User()));
+        when(materialRepository.findById(10L)).thenReturn(Optional.of(new Material()));
+        when(fileMapper.toEntity(request)).thenReturn(mappedFile);
+        when(storageService.store(any())).thenReturn("generated-key");
+        when(fileRepository.saveAndFlush(mappedFile)).thenThrow(new IllegalStateException("db down"));
+
+        assertThrows(IllegalStateException.class,
+                () -> fileService.create("anna@example.com", request, pdfUpload()));
+
+        verify(storageService).delete("generated-key");
+    }
+
+    @Test
+    @DisplayName("create should reject content types that are not allowed")
+    void create_shouldRejectDisallowedContentType() {
+        FileCreateRequest request = new FileCreateRequest();
+        request.setMaterialId(10L);
+
+        MockMultipartFile exe = new MockMultipartFile("file", "x.exe", "application/x-msdownload", "x".getBytes());
+
+        when(userRepository.findByEmail("anna@example.com")).thenReturn(Optional.of(new User()));
+        when(materialRepository.findById(10L)).thenReturn(Optional.of(new Material()));
+
+        assertThrows(BusinessException.class,
+                () -> fileService.create("anna@example.com", request, exe));
+
+        verify(storageService, never()).store(any());
     }
 
     @Test
@@ -100,17 +157,16 @@ class FileServiceTest {
         when(materialRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-                () -> fileService.create("anna@example.com", request));
+                () -> fileService.create("anna@example.com", request, pdfUpload()));
 
-        verify(fileRepository, never()).save(any());
+        verify(fileRepository, never()).saveAndFlush(any());
     }
 
     @Test
-    @DisplayName("updateById should update pathId, readOnly and name as requested")
+    @DisplayName("updateById should update readOnly and name and never touch the storage key")
     void updateById_shouldUpdateProvidedFields() {
         FileUpdateRequest request = new FileUpdateRequest();
-        request.setPathId(2L);
-        request.setReadOnly(true);
+                request.setReadOnly(true);
         request.setName("new-name.pdf");
 
         when(fileRepository.findById(1L)).thenReturn(Optional.of(existingFile));
@@ -119,7 +175,7 @@ class FileServiceTest {
 
         fileService.updateById(1L, request);
 
-        assertEquals(2L, existingFile.getPathId());
+        assertEquals("key-1", existingFile.getPathId());
         assertThat(existingFile.getReadOnly()).isTrue();
         assertEquals("new-name.pdf", existingFile.getName());
         assertEquals("10KB", existingFile.getSize());
@@ -160,24 +216,24 @@ class FileServiceTest {
     @DisplayName("findAll should return every file mapped to FileResponse")
     void findAll_shouldReturnMappedFiles() {
         FileResponse response = new FileResponse();
-        when(fileRepository.findAll()).thenReturn(List.of(existingFile));
+        when(fileRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(existingFile)));
         when(fileMapper.toResponse(existingFile)).thenReturn(response);
 
-        List<FileResponse> result = fileService.findAll();
+        Page<FileResponse> result = fileService.findAll(PageRequest.of(0, 10));
 
-        assertThat(result).containsExactly(response);
+        assertThat(result.getContent()).containsExactly(response);
     }
 
     @Test
     @DisplayName("findAllSummary should return every file mapped to FileSummaryResponse")
     void findAllSummary_shouldReturnMappedSummaries() {
         FileSummaryResponse summary = new FileSummaryResponse();
-        when(fileRepository.findAll()).thenReturn(List.of(existingFile));
+        when(fileRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(existingFile)));
         when(fileMapper.toSummaryResponse(existingFile)).thenReturn(summary);
 
-        List<FileSummaryResponse> result = fileService.findAllSummary();
+        Page<FileSummaryResponse> result = fileService.findAllSummary(PageRequest.of(0, 10));
 
-        assertThat(result).containsExactly(summary);
+        assertThat(result.getContent()).containsExactly(summary);
     }
 
     @Test

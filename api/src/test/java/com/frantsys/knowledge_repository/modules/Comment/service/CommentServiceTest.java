@@ -21,6 +21,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -177,12 +182,12 @@ class CommentServiceTest {
         Comment comment = new Comment();
         CommentResponse response = new CommentResponse();
 
-        when(commentRepository.findAll()).thenReturn(List.of(comment));
+        when(commentRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(comment)));
         when(commentMapper.toResponse(comment)).thenReturn(response);
 
-        List<CommentResponse> result = commentService.findAll();
+        Page<CommentResponse> result = commentService.findAll(PageRequest.of(0, 10));
 
-        assertThat(result).containsExactly(response);
+        assertThat(result.getContent()).containsExactly(response);
     }
 
     @Test
@@ -191,12 +196,12 @@ class CommentServiceTest {
         Comment comment = new Comment();
         CommentSummaryResponse summary = new CommentSummaryResponse();
 
-        when(commentRepository.findAll()).thenReturn(List.of(comment));
+        when(commentRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(comment)));
         when(commentMapper.toSummaryResponse(comment)).thenReturn(summary);
 
-        List<CommentSummaryResponse> result = commentService.findAllSummary();
+        Page<CommentSummaryResponse> result = commentService.findAllSummary(PageRequest.of(0, 10));
 
-        assertThat(result).containsExactly(summary);
+        assertThat(result.getContent()).containsExactly(summary);
     }
 
     @Test
