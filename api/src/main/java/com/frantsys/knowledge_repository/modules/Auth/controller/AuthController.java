@@ -5,6 +5,7 @@ import com.frantsys.knowledge_repository.modules.Auth.dto.request.UserRegisterRe
 import com.frantsys.knowledge_repository.modules.Auth.dto.response.UserLoginResponse;
 import com.frantsys.knowledge_repository.modules.Auth.service.AuthService;
 import com.frantsys.knowledge_repository.modules.User.dto.response.UserResponse;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @Operation(summary = "Cadastra um novo usuário")
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@RequestBody @Valid UserRegisterRequest request) {
 
@@ -32,6 +34,7 @@ public class AuthController {
 
     }
 
+    @Operation(summary = "Autentica e devolve o token JWT")
     @PostMapping("/login")
     public ResponseEntity<UserLoginResponse> login(@RequestBody @Valid UserLoginRequest request) {
 
