@@ -11,7 +11,7 @@ public class FileResponse {
 
     private Long id;
     private Long materialId;
-    private Long pathId;
+    private String downloadUrl;
     private String size;
     private String type;
     private Boolean readOnly;

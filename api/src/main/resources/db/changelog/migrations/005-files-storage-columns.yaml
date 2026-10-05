@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-files-storage-columns
+      author: francis
+      changes:
+        # path_id passa a guardar a chave do arquivo no armazenamento (UUID), não mais um número
+        - modifyDataType:
+            tableName: files
+            columnName: path_id
+            newDataType: VARCHAR(255)
+        # MIME types como o do .docx têm mais de 50 caracteres
+        - modifyDataType:
+            tableName: files
+            columnName: type
+            newDataType: VARCHAR(255)

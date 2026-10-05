@@ -1,6 +1,5 @@
 package com.frantsys.knowledge_repository.modules.File.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,19 +11,10 @@ public class FileCreateRequest {
     @NotNull(message = "Material não pode ser nulo")
     private Long materialId;
 
-    @NotNull(message = "Arquivo não pode ser nulo")
-    private Long pathId;
-
-    @NotBlank(message = "Tamanho é obrigatório")
-    private String size;
-
-    @NotBlank(message = "Tipo é obrigatório")
-    private String type;
-
     @NotNull(message = "Definição de leitura não pode ser nula")
     private Boolean readOnly;
 
-    @NotBlank(message = "Nome é obrigatório")
+    // Se vazio, usa o nome original do arquivo enviado
     private String name;
 
 }

@@ -24,6 +24,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      STORAGE_LOCATION: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
     ports:
       - "${SPRING_PORT}:8080"
   ui:
@@ -46,3 +49,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

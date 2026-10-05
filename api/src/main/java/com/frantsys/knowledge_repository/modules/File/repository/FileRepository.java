@@ -5,4 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FileRepository extends JpaRepository<File, Long> {
 
+    boolean existsByIdAndMaterialUserEmail(Long id, String email);
+
 }

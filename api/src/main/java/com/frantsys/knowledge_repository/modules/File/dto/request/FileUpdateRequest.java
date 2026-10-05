@@ -7,9 +7,6 @@ import lombok.Setter;
 @Setter
 public class FileUpdateRequest {
 
-    private Long pathId;
-    private String size;
-    private String type;
     private Boolean readOnly;
     private String name;
 

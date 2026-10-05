@@ -35,7 +35,7 @@ public class File {
     private Material material;
 
     @Column(nullable = false, name = "path_id")
-    private Long pathId;
+    private String pathId;
 
     @Column(nullable = false)
     private String size;
