@@ -6,11 +6,18 @@ import com.frantsys.knowledge_repository.modules.Comment.dto.request.CommentUpda
 import com.frantsys.knowledge_repository.modules.Comment.dto.response.CommentResponse;
 import com.frantsys.knowledge_repository.modules.Comment.dto.response.CommentSummaryResponse;
 import com.frantsys.knowledge_repository.modules.Comment.service.CommentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -20,9 +27,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @Tag(name = "Comment", description = "API path for managing comments")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/v1/api/comments")
 @RequiredArgsConstructor
@@ -30,24 +36,27 @@ public class CommentController {
 
     private final CommentService commentService;
 
+    @Operation(summary = "Lista comentários (paginado)")
     @GetMapping
-    public ResponseEntity<List<CommentResponse>> findAll() {
+    public ResponseEntity<Page<CommentResponse>> findAll(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        List<CommentResponse> comments = commentService.findAll();
+        Page<CommentResponse> comments = commentService.findAll(pageable);
 
         return ResponseEntity.ok(comments);
 
     }
 
+    @Operation(summary = "Lista resumo dos comentários (paginado)")
     @GetMapping("/summary")
-    public ResponseEntity<List<CommentSummaryResponse>> findAllSummary() {
+    public ResponseEntity<Page<CommentSummaryResponse>> findAllSummary(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        List<CommentSummaryResponse> comments = commentService.findAllSummary();
+        Page<CommentSummaryResponse> comments = commentService.findAllSummary(pageable);
 
         return ResponseEntity.ok(comments);
 
     }
 
+    @Operation(summary = "Busca um comentário pelo ID")
     @GetMapping("/{id}")
     public ResponseEntity<CommentResponse> findById(@PathVariable Long id) {
 
@@ -57,6 +66,7 @@ public class CommentController {
 
     }
 
+    @Operation(summary = "Cria um comentário em um material")
     @PostMapping
     public ResponseEntity<CommentResponse> create(Authentication authentication, @RequestBody @Valid CommentCreateRequest request) {
 
@@ -66,6 +76,7 @@ public class CommentController {
 
     }
 
+    @Operation(summary = "Responde a um comentário")
     @PostMapping("/{parentId}/replies")
     public ResponseEntity<CommentResponse> createReply(Authentication authentication, @PathVariable Long parentId, @RequestBody @Valid CommentReplyCreateRequest request) {
 
@@ -75,6 +86,8 @@ public class CommentController {
 
     }
 
+    @Operation(summary = "Atualiza um comentário (dono ou admin)")
+    @PreAuthorize("hasRole('ADMIN') or @securityService.isCommentOwner(#id, authentication.name)")
     @PatchMapping("/{id}")
     public ResponseEntity<CommentResponse> update(@PathVariable Long id, @RequestBody @Valid CommentUpdateRequest request) {
 

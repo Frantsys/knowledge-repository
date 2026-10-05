@@ -19,6 +19,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,22 +35,18 @@ public class UserService implements UserDetailsService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
-    public List<UserResponse> findAll() {
+    public Page<UserResponse> findAll(Pageable pageable) {
 
-        return userRepository.findAll()
-                .stream()
-                .map(userMapper::toResponse)
-                .toList();
+        return userRepository.findAll(pageable)
+                .map(userMapper::toResponse);
 
     }
 
     @Transactional(readOnly = true)
-    public List<UserSummaryResponse> findAllSummary() {
+    public Page<UserSummaryResponse> findAllSummary(Pageable pageable) {
 
-        return userRepository.findAll()
-                .stream()
-                .map(userMapper::toSummaryResponse)
-                .toList();
+        return userRepository.findAll(pageable)
+                .map(userMapper::toSummaryResponse);
 
     }
 
@@ -62,7 +60,7 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional(readOnly = true)
-    public List<UserResponse> filter(UserFilterRequest filter) {
+    public Page<UserResponse> filter(UserFilterRequest filter, Pageable pageable) {
 
         Specification<User> spec = Specification.unrestricted();
 
@@ -90,10 +88,8 @@ public class UserService implements UserDetailsService {
             spec = spec.and(UserSpec.byCreatedBefore(filter.endDate()));
         }
 
-        return userRepository.findAll(spec)
-                .stream()
-                .map(userMapper::toResponse)
-                .toList();
+        return userRepository.findAll(spec, pageable)
+                .map(userMapper::toResponse);
 
     }
 

@@ -12,6 +12,8 @@ import com.frantsys.knowledge_repository.modules.Material.repository.MaterialRep
 import com.frantsys.knowledge_repository.modules.User.model.User;
 import com.frantsys.knowledge_repository.modules.User.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,22 +29,18 @@ public class MaterialService {
     private final MaterialMapper materialMapper;
 
     @Transactional(readOnly = true)
-    public List<MaterialResponse> findAll() {
+    public Page<MaterialResponse> findAll(Pageable pageable) {
 
-        return materialRepository.findAll()
-                .stream()
-                .map(materialMapper::toResponse)
-                .toList();
+        return materialRepository.findAll(pageable)
+                .map(materialMapper::toResponse);
 
     }
 
     @Transactional(readOnly = true)
-    public List<MaterialSummaryResponse> findAllSummary() {
+    public Page<MaterialSummaryResponse> findAllSummary(Pageable pageable) {
 
-        return materialRepository.findAll()
-                .stream()
-                .map(materialMapper::toSummaryResponse)
-                .toList();
+        return materialRepository.findAll(pageable)
+                .map(materialMapper::toSummaryResponse);
 
     }
 

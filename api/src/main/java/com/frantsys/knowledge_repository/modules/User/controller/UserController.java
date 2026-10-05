@@ -7,10 +7,17 @@ import com.frantsys.knowledge_repository.modules.User.dto.request.UserUpdateRequ
 import com.frantsys.knowledge_repository.modules.User.dto.response.UserResponse;
 import com.frantsys.knowledge_repository.modules.User.dto.response.UserSummaryResponse;
 import com.frantsys.knowledge_repository.modules.User.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -20,9 +27,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @Tag(name = "User", description = "API path for managing users")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/v1/api/users")
 @RequiredArgsConstructor
@@ -30,33 +36,40 @@ public class UserController {
 
     private final UserService userService;
 
+    @Operation(summary = "Lista usuários (paginado, somente admin)")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<List<UserResponse>> findAll() {
+    public ResponseEntity<Page<UserResponse>> findAll(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        List<UserResponse> users = userService.findAll();
+        Page<UserResponse> users = userService.findAll(pageable);
 
         return ResponseEntity.ok(users);
 
     }
 
+    @Operation(summary = "Lista resumo dos usuários (paginado, somente admin)")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/summary")
-    public ResponseEntity<List<UserSummaryResponse>> findAllSummary() {
+    public ResponseEntity<Page<UserSummaryResponse>> findAllSummary(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        List<UserSummaryResponse> users = userService.findAllSummary();
+        Page<UserSummaryResponse> users = userService.findAllSummary(pageable);
 
         return ResponseEntity.ok(users);
 
     }
 
+    @Operation(summary = "Filtra usuários (paginado, somente admin)")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/filter")
-    public ResponseEntity<List<UserResponse>> filter(@ModelAttribute UserFilterRequest filter) {
+    public ResponseEntity<Page<UserResponse>> filter(@ModelAttribute UserFilterRequest filter, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        List<UserResponse> users = userService.filter(filter);
+        Page<UserResponse> users = userService.filter(filter, pageable);
 
         return ResponseEntity.ok(users);
 
     }
 
+    @Operation(summary = "Busca um usuário pelo ID")
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> findById(@PathVariable Long id) {
 
@@ -66,6 +79,8 @@ public class UserController {
 
     }
 
+    @Operation(summary = "Atualiza um usuário (o próprio usuário ou admin)")
+    @PreAuthorize("hasRole('ADMIN') or @securityService.isSelf(#id, authentication.name)")
     @PatchMapping("/{id}")
     public ResponseEntity<UserResponse> update(@PathVariable Long id, @RequestBody @Valid UserUpdateRequest request) {
 
@@ -75,6 +90,8 @@ public class UserController {
 
     }
 
+    @Operation(summary = "Ativa ou desativa um usuário (somente admin)")
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{id}/activation")
     public ResponseEntity<UserResponse> updateActivation(@PathVariable Long id, @RequestBody @Valid UserUpdateActivationRequest request) {
 
@@ -84,7 +101,8 @@ public class UserController {
 
     }
 
-    // Altera a senha do usuário autenticado (o e-mail vem do subject do JWT)
+    // Altera a senha do usuário autenticado
+    @Operation(summary = "Altera a senha do usuário autenticado")
     @PatchMapping("/password")
     public ResponseEntity<Void> updatePassword(Authentication authentication, @RequestBody @Valid UserUpdatePasswordRequest request) {
 

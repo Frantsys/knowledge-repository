@@ -14,6 +14,8 @@ import com.frantsys.knowledge_repository.modules.Material.repository.MaterialRep
 import com.frantsys.knowledge_repository.modules.User.model.User;
 import com.frantsys.knowledge_repository.modules.User.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,22 +32,18 @@ public class CommentService {
     private final CommentMapper commentMapper;
 
     @Transactional(readOnly = true)
-    public List<CommentResponse> findAll() {
+    public Page<CommentResponse> findAll(Pageable pageable) {
 
-        return commentRepository.findAll()
-                .stream()
-                .map(commentMapper::toResponse)
-                .toList();
+        return commentRepository.findAll(pageable)
+                .map(commentMapper::toResponse);
 
     }
 
     @Transactional(readOnly = true)
-    public List<CommentSummaryResponse> findAllSummary() {
+    public Page<CommentSummaryResponse> findAllSummary(Pageable pageable) {
 
-        return commentRepository.findAll()
-                .stream()
-                .map(commentMapper::toSummaryResponse)
-                .toList();
+        return commentRepository.findAll(pageable)
+                .map(commentMapper::toSummaryResponse);
 
     }
 
