@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Comment", description = "API path for managing comments")
+@Tag(name = "Comment", description = "Caminho da API para gerenciar comentários")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/v1/api/comments")

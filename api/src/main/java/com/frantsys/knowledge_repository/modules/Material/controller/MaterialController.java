@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Material", description = "API path for managing materials")
+@Tag(name = "Material", description = "Caminho da API para gerenciar materiais")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/v1/api/materials")

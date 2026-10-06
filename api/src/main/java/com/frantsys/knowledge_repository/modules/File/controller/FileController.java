@@ -38,7 +38,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 
-@Tag(name = "File", description = "API path for managing files")
+@Tag(name = "File", description = "Caminho da API para gerenciar arquivos")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/v1/api/files")

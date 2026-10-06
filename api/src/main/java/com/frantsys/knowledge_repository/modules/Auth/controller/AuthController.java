@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "User Auth", description = "API path for managing user authentication")
+@Tag(name = "User Auth", description = "Caminho da API para gerenciar a autenticação do usuário")
 @RestController
 @RequestMapping("/v1/api/auth")
 @RequiredArgsConstructor
