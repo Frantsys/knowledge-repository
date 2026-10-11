@@ -36,9 +36,24 @@ export default function Navbar() {
   const profileRef = useRef<HTMLDivElement>(null);
 
   /*
-   * ---------------------------------------------------------
+   Bloquear rolagem de tela ao abrir modal
+  */
+
+  useEffect(() => {
+    if (menuOpen || publishModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    // Garante a liberação da rolagem se o componente for desmontado
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen, publishModalOpen]);
+
+  /*
    * FECHAR DROPDOWNS AO CLICAR FORA
-   * ---------------------------------------------------------
    */
 
   useEffect(() => {
@@ -68,9 +83,7 @@ export default function Navbar() {
   }, []);
 
   /*
-   * ---------------------------------------------------------
    * FECHAR MENU MOBILE AO TROCAR DE PÁGINA
-   * ---------------------------------------------------------
    */
 
   useEffect(() => {
@@ -80,9 +93,7 @@ export default function Navbar() {
   }, [pathname]);
 
   /*
-   * ---------------------------------------------------------
    * FUNÇÃO PARA SABER A PÁGINA ATUAL
-   * ---------------------------------------------------------
    */
 
   const isActive = (path: string) => {
@@ -1095,7 +1106,7 @@ export default function Navbar() {
               justify-center
               bg-black/40
               p-4
-              backdrop-blur-sm
+              backdrop-blur-[2px]
             "
             initial={{
               opacity: 0,

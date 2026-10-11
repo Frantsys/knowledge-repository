@@ -6,6 +6,11 @@ import {
     ArrowRight,
     BookOpen,
     FileText,
+    Search,
+    Upload,
+    Compass,
+    FolderOpen,
+    Clock3,
 } from "lucide-react";
 
 import Navbar from "@/components/navbar";
@@ -15,16 +20,22 @@ const materiaisAcessados = [
         id: 1,
         title: "Resumo de Banco de Dados",
         image: "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
+        category: "Banco de Dados",
+        accessed: "Há 2 horas",
     },
     {
         id: 2,
         title: "Material de Programação",
         image: "https://images.unsplash.com/photo-1499750310107-5fef28a66643",
+        category: "Programação",
+        accessed: "Ontem",
     },
     {
         id: 3,
         title: "Resumo de Engenharia de Software",
         image: "https://images.unsplash.com/photo-1456324504439-367cee3b3c32",
+        category: "Engenharia de Software",
+        accessed: "Há 2 dias",
     },
 ];
 
@@ -36,6 +47,9 @@ const novosMateriais = [
         title: "Resumos de Direito Penal",
         description:
             "CF/88, conceitos e princípios fundamentais do Direito Penal, aplicação da lei penal no tempo e no espaço...",
+        type: "PDF",
+        pages: "12 páginas",
+        time: "Há 10 min",
     },
     {
         id: 2,
@@ -44,6 +58,9 @@ const novosMateriais = [
         title: "Resumo de Banco de Dados",
         description:
             "Conceitos fundamentais de banco de dados, modelos relacionais, entidades, atributos e relacionamentos...",
+        type: "PDF",
+        pages: "18 páginas",
+        time: "Há 25 min",
     },
     {
         id: 3,
@@ -52,6 +69,9 @@ const novosMateriais = [
         title: "Introdução à Programação",
         description:
             "Variáveis, estruturas condicionais, funções, vetores e os principais conceitos utilizados na programação...",
+        type: "PDF",
+        pages: "15 páginas",
+        time: "Há 40 min",
     },
     {
         id: 4,
@@ -60,6 +80,9 @@ const novosMateriais = [
         title: "Resumo de Engenharia",
         description:
             "Principais conceitos de engenharia de software, levantamento de requisitos, processos e desenvolvimento...",
+        type: "PDF",
+        pages: "21 páginas",
+        time: "Há 1 hora",
     },
 ];
 
@@ -79,22 +102,325 @@ export default function HomePage() {
             ====================================================== */}
 
             <main>
+
                 <div
                     className="
                         mx-auto
                         w-full
                         max-w-[1250px]
-
                         px-5
                         py-8
-
                         sm:px-8
                         sm:py-10
-
                         lg:px-10
                         lg:py-12
                     "
                 >
+
+                    {/* =================================================
+                        BOAS-VINDAS
+                    ================================================== */}
+
+                    <section className="mb-8">
+
+                        <div
+                            className="
+                                flex
+                                flex-col
+                                gap-5
+                                lg:flex-row
+                                lg:items-end
+                                lg:justify-between
+                            "
+                        >
+
+                            <div>
+
+                                <p
+                                    className="
+                                        mb-1
+                                        text-sm
+                                        font-medium
+                                        text-purple-600
+                                    "
+                                >
+                                    Bom dia, Gilberto 
+                                </p>
+
+                                <h1
+                                    className="
+                                        text-2xl
+                                        font-bold
+                                        tracking-tight
+                                        text-[#21005f]
+                                        sm:text-3xl
+                                    "
+                                >
+                                    O que você quer estudar hoje?
+                                </h1>
+
+                                <p
+                                    className="
+                                        mt-2
+                                        max-w-xl
+                                        text-sm
+                                        leading-relaxed
+                                        text-gray-500
+                                    "
+                                >
+                                    Encontre materiais para continuar seus
+                                    estudos ou compartilhe algo com a comunidade.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
+                        {/* =================================================
+                            BUSCA
+                        ================================================== */}
+
+                        <div className="mt-6">
+
+                            <div
+                                className="
+                                    flex
+                                    h-12
+                                    w-full
+                                    items-center
+                                    gap-3
+                                    rounded-xl
+                                    border
+                                    border-gray-200
+                                    bg-white
+                                    px-4
+                                    shadow-sm
+                                    transition
+                                    focus-within:border-purple-400
+                                    focus-within:ring-4
+                                    focus-within:ring-purple-500/10
+                                "
+                            >
+
+                                <Search
+                                    size={19}
+                                    className="shrink-0 text-gray-400"
+                                />
+
+                                <input
+                                    type="text"
+                                    placeholder="Buscar materiais, disciplinas ou assuntos..."
+                                    className="
+                                        h-full
+                                        min-w-0
+                                        flex-1
+                                        bg-transparent
+                                        text-sm
+                                        text-gray-800
+                                        outline-none
+                                        placeholder:text-gray-400
+                                    "
+                                />
+
+                                <Link
+                                    href="/explorar"
+                                    className="
+                                        hidden
+                                        h-8
+                                        items-center
+                                        gap-1.5
+                                        rounded-lg
+                                        bg-purple-600
+                                        px-3
+                                        text-xs
+                                        font-medium
+                                        text-white
+                                        transition
+                                        hover:bg-purple-700
+                                        sm:flex
+                                    "
+                                >
+                                    Buscar
+                                    <ArrowRight size={14} />
+                                </Link>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+
+                    {/* =================================================
+                        ACESSO RÁPIDO
+                    ================================================== */}
+
+                    <section className="mb-10">
+
+                        <div className="mb-4">
+
+                            <h2
+                                className="
+                                    text-base
+                                    font-bold
+                                    text-[#21005f]
+                                    sm:text-lg
+                                "
+                            >
+                                Acesso rápido
+                            </h2>
+
+                        </div>
+
+
+                        <div
+                            className="
+                                grid
+                                grid-cols-1
+                                gap-3
+                                sm:grid-cols-2
+                                lg:grid-cols-2
+                            "
+                        >
+
+                            {/* Explorar */}
+
+                            <Link
+                                href="/explorar"
+                                className="
+                                    group
+                                    flex
+                                    items-center
+                                    gap-4
+                                    rounded-xl
+                                    border
+                                    border-gray-200
+                                    bg-white
+                                    p-4
+                                    shadow-sm
+                                    transition
+                                    hover:-translate-y-0.5
+                                    hover:border-purple-200
+                                    hover:shadow-md
+                                "
+                            >
+
+                                <div
+                                    className="
+                                        flex
+                                        h-10
+                                        w-10
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        bg-purple-50
+                                        text-purple-600
+                                        transition
+                                        group-hover:bg-purple-100
+                                    "
+                                >
+                                    <Compass size={20} />
+                                </div>
+
+                                <div className="min-w-0">
+
+                                    <p className="text-sm font-semibold text-gray-800">
+                                        Explorar materiais
+                                    </p>
+
+                                    <p className="mt-0.5 text-xs text-gray-500">
+                                        Encontre novos conteúdos
+                                    </p>
+
+                                </div>
+
+                                <ArrowRight
+                                    size={16}
+                                    className="
+                                        ml-auto
+                                        shrink-0
+                                        text-gray-300
+                                        transition
+                                        group-hover:translate-x-0.5
+                                        group-hover:text-purple-600
+                                    "
+                                />
+
+                            </Link>
+
+
+                            {/* Meus materiais */}
+
+                            <Link
+                                href="/meusmateriais"
+                                className="
+                                    group
+                                    flex
+                                    items-center
+                                    gap-4
+                                    rounded-xl
+                                    border
+                                    border-gray-200
+                                    bg-white
+                                    p-4
+                                    shadow-sm
+                                    transition
+                                    hover:-translate-y-0.5
+                                    hover:border-purple-200
+                                    hover:shadow-md
+                                "
+                            >
+
+                                <div
+                                    className="
+                                        flex
+                                        h-10
+                                        w-10
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        bg-purple-50
+                                        text-purple-600
+                                        transition
+                                        group-hover:bg-purple-100
+                                    "
+                                >
+                                    <FolderOpen size={20} />
+                                </div>
+
+                                <div className="min-w-0">
+
+                                    <p className="text-sm font-semibold text-gray-800">
+                                        Meus materiais
+                                    </p>
+
+                                    <p className="mt-0.5 text-xs text-gray-500">
+                                        Acesse seus conteúdos salvos
+                                    </p>
+
+                                </div>
+
+                                <ArrowRight
+                                    size={16}
+                                    className="
+                                        ml-auto
+                                        shrink-0
+                                        text-gray-300
+                                        transition
+                                        group-hover:translate-x-0.5
+                                        group-hover:text-purple-600
+                                    "
+                                />
+
+                            </Link>
+
+                        </div>
+
+                    </section>
+
 
                     {/* =================================================
                         ÚLTIMOS MATERIAIS ACESSADOS
@@ -104,22 +430,27 @@ export default function HomePage() {
 
                         {/* Cabeçalho */}
 
-                        <div className="mb-6 flex items-center justify-between">
+                        <div className="mb-5 flex items-center justify-between">
 
-                            <h1
-                                className="
-                                    text-lg
-                                    font-bold
-                                    text-[#21005f]
+                            <div>
 
-                                    sm:text-xl
-                                "
-                            >
-                                Meus últimos materiais acessados
-                            </h1>
+                                <h2
+                                    className="
+                                        text-lg
+                                        font-bold
+                                        text-[#21005f]
+                                        sm:text-xl
+                                    "
+                                >
+                                    Continue estudando
+                                </h2>
 
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Seus materiais acessados recentemente
+                                </p>
 
-                            {/* Desktop */}
+                            </div>
+
 
                             <Link
                                 href="/meusmateriais"
@@ -127,19 +458,15 @@ export default function HomePage() {
                                     hidden
                                     items-center
                                     gap-1
-
                                     text-xs
                                     font-medium
                                     text-purple-600
-
                                     transition
                                     hover:text-purple-800
-
                                     sm:flex
                                 "
                             >
                                 Ver todos
-
                                 <ArrowRight size={14} />
                             </Link>
 
@@ -153,30 +480,28 @@ export default function HomePage() {
                                 grid
                                 grid-cols-1
                                 gap-5
-
                                 sm:grid-cols-2
-
                                 lg:grid-cols-3
                             "
                         >
 
                             {materiaisAcessados.map((material) => (
 
-                                <article
+                                <Link
                                     key={material.id}
+                                    href={`/materiais/${material.id}`}
                                     className="
                                         group
-                                        cursor-pointer
+                                        block
                                         overflow-hidden
-
                                         rounded-xl
+                                        border
+                                        border-gray-200
                                         bg-white
-
                                         shadow-sm
-
                                         transition
-
                                         hover:-translate-y-1
+                                        hover:border-purple-200
                                         hover:shadow-lg
                                     "
                                 >
@@ -186,75 +511,121 @@ export default function HomePage() {
                                     <div
                                         className="
                                             relative
-                                            h-[150px]
-
+                                            h-[160px]
                                             overflow-hidden
-
                                             bg-purple-100
-
-                                            sm:h-[145px]
                                         "
                                     >
+
                                         <img
                                             src={material.image}
                                             alt={material.title}
                                             className="
                                                 h-full
                                                 w-full
-
                                                 object-cover
-
                                                 transition
-                                                duration-300
-
+                                                duration-500
                                                 group-hover:scale-105
                                             "
                                         />
+
+                                        {/* Categoria */}
+
+                                        <div
+                                            className="
+                                                absolute
+                                                left-3
+                                                top-3
+                                                rounded-md
+                                                bg-white/90
+                                                px-2.5
+                                                py-1
+                                                text-[10px]
+                                                font-medium
+                                                text-purple-700
+                                                shadow-sm
+                                                backdrop-blur-sm
+                                            "
+                                        >
+                                            {material.category}
+                                        </div>
+
                                     </div>
 
 
-                                    {/* Parte roxa */}
+                                    {/* Informações */}
 
-                                    <div
-                                        className="
-                                            flex
-                                            h-[82px]
+                                    <div className="p-4">
 
-                                            items-end
+                                        <div className="flex items-start gap-3">
 
-                                            bg-gradient-to-br
-                                            from-[#7731e8]
-                                            to-[#6d2ae0]
-
-                                            px-4
-                                            py-3
-                                        "
-                                    >
-
-                                        <div className="flex items-center gap-2">
-
-                                            <BookOpen
-                                                size={16}
-                                                className="text-white/80"
-                                            />
-
-                                            <h2
+                                            <div
                                                 className="
-                                                    line-clamp-1
-
-                                                    text-xs
-                                                    font-medium
-                                                    text-white
+                                                    flex
+                                                    h-9
+                                                    w-9
+                                                    shrink-0
+                                                    items-center
+                                                    justify-center
+                                                    rounded-lg
+                                                    bg-purple-50
+                                                    text-purple-600
                                                 "
                                             >
-                                                {material.title}
-                                            </h2>
+                                                <BookOpen size={17} />
+                                            </div>
+
+                                            <div className="min-w-0 flex-1">
+
+                                                <h3
+                                                    className="
+                                                        line-clamp-2
+                                                        text-sm
+                                                        font-semibold
+                                                        leading-snug
+                                                        text-gray-800
+                                                    "
+                                                >
+                                                    {material.title}
+                                                </h3>
+
+                                                <div
+                                                    className="
+                                                        mt-2
+                                                        flex
+                                                        items-center
+                                                        gap-1.5
+                                                        text-[11px]
+                                                        text-gray-400
+                                                    "
+                                                >
+                                                    <Clock3 size={12} />
+
+                                                    <span>
+                                                        Acessado {material.accessed}
+                                                    </span>
+                                                </div>
+
+                                            </div>
+
+                                            <ArrowRight
+                                                size={16}
+                                                className="
+                                                    mt-1
+                                                    shrink-0
+                                                    text-gray-300
+                                                    transition
+                                                    group-hover:translate-x-0.5
+                                                    group-hover:text-purple-600
+                                                "
+                                            />
 
                                         </div>
 
                                     </div>
 
-                                </article>
+                                </Link>
 
                             ))}
 
@@ -268,19 +639,15 @@ export default function HomePage() {
                             className="
                                 mt-4
                                 flex
-
                                 items-center
                                 gap-1
-
                                 text-xs
                                 font-medium
                                 text-purple-600
-
                                 sm:hidden
                             "
                         >
                             Ver todos
-
                             <ArrowRight size={14} />
                         </Link>
 
@@ -291,26 +658,31 @@ export default function HomePage() {
                         NOVOS MATERIAIS
                     ================================================== */}
 
-                    <section className="mt-10 sm:mt-12">
+                    <section className="mt-12 sm:mt-14">
 
                         {/* Cabeçalho */}
 
                         <div className="mb-5 flex items-center justify-between">
 
-                            <h2
-                                className="
-                                    text-base
-                                    font-bold
-                                    text-[#21005f]
+                            <div>
 
-                                    sm:text-lg
-                                "
-                            >
-                                Novos materiais postados
-                            </h2>
+                                <h2
+                                    className="
+                                        text-lg
+                                        font-bold
+                                        text-[#21005f]
+                                        sm:text-xl
+                                    "
+                                >
+                                    Novos materiais
+                                </h2>
 
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Conteúdos publicados recentemente pela comunidade
+                                </p>
 
-                            {/* Desktop */}
+                            </div>
+
 
                             <Link
                                 href="/explorar"
@@ -318,19 +690,15 @@ export default function HomePage() {
                                     hidden
                                     items-center
                                     gap-1
-
                                     text-xs
                                     font-medium
                                     text-purple-600
-
                                     transition
                                     hover:text-purple-800
-
                                     sm:flex
                                 "
                             >
                                 Explorar
-
                                 <ArrowRight size={14} />
                             </Link>
 
@@ -344,93 +712,63 @@ export default function HomePage() {
                                 grid
                                 grid-cols-1
                                 gap-4
-
                                 sm:grid-cols-2
-
                                 lg:grid-cols-4
                             "
                         >
 
                             {novosMateriais.map((material) => (
 
-                                <article
+                                <Link
                                     key={material.id}
+                                    href={`/materiais/${material.id}`}
                                     className="
                                         group
-                                        cursor-pointer
-
+                                        flex
+                                        min-h-[280px]
+                                        flex-col
                                         overflow-hidden
                                         rounded-xl
-
                                         border
-                                        border-purple-100
-
+                                        border-gray-200
                                         bg-white
-
-                                        shadow-[0_3px_12px_rgba(115,45,220,0.12)]
-
+                                        shadow-sm
                                         transition
-
                                         hover:-translate-y-1
-
-                                        hover:shadow-[0_6px_20px_rgba(115,45,220,0.18)]
+                                        hover:border-purple-200
+                                        hover:shadow-lg
                                     "
                                 >
 
-                                    {/* =================================================
-                                        USUÁRIO
-                                    ================================================== */}
+                                    {/* Usuário */}
 
-                                    <div
-                                        className="
-                                            flex
-                                            items-center
-                                            gap-2
-
-                                            px-3
-                                            pt-3
-                                        "
-                                    >
-
-                                        {/* Avatar */}
+                                    <div className="flex items-center gap-2.5 px-4 pt-4">
 
                                         <div
                                             className="
                                                 flex
-                                                h-8
-                                                w-8
+                                                h-9
+                                                w-9
                                                 shrink-0
-
                                                 items-center
                                                 justify-center
-
-                                                overflow-hidden
                                                 rounded-full
-
                                                 bg-purple-100
+                                                text-xs
+                                                font-semibold
+                                                text-purple-700
                                             "
                                         >
-                                            <span
-                                                className="
-                                                    text-xs
-                                                    font-semibold
-                                                    text-purple-700
-                                                "
-                                            >
-                                                A
-                                            </span>
+                                            A
                                         </div>
 
-
-                                        {/* Informações */}
 
                                         <div className="min-w-0">
 
                                             <p
                                                 className="
                                                     truncate
-
-                                                    text-[9px]
+                                                    text-xs
                                                     font-semibold
                                                     text-gray-800
                                                 "
@@ -440,9 +778,9 @@ export default function HomePage() {
 
                                             <p
                                                 className="
+                                                    mt-0.5
                                                     truncate
-
-                                                    text-[8px]
+                                                    text-[10px]
                                                     text-gray-400
                                                 "
                                             >
@@ -454,122 +792,184 @@ export default function HomePage() {
                                     </div>
 
 
-                                    {/* =================================================
-                                        PREVIEW DO MATERIAL
-                                    ================================================== */}
+                                    {/* Conteúdo */}
 
-                                    <div className="px-3 pb-3 pt-2">
+                                    <div className="flex flex-1 flex-col px-4 pb-4 pt-4">
+
+                                        {/* Tipo */}
+
+                                        <div className="mb-3 flex items-center gap-2">
+
+                                            <span
+                                                className="
+                                                    inline-flex
+                                                    items-center
+                                                    gap-1
+                                                    rounded-md
+                                                    bg-purple-50
+                                                    px-2
+                                                    py-1
+                                                    text-[10px]
+                                                    font-medium
+                                                    text-purple-700
+                                                "
+                                            >
+                                                <FileText size={11} />
+                                                {material.type}
+                                            </span>
+
+                                            <span className="text-[10px] text-gray-400">
+                                                {material.pages}
+                                            </span>
+
+                                        </div>
+
+
+                                        {/* Título */}
+
+                                        <h3
+                                            className="
+                                                line-clamp-2
+                                                text-sm
+                                                font-semibold
+                                                leading-snug
+                                                text-gray-800
+                                            "
+                                        >
+                                            {material.title}
+                                        </h3>
+
+
+                                        {/* Descrição */}
+
+                                        <p
+                                            className="
+                                                mt-2
+                                                line-clamp-3
+                                                text-xs
+                                                leading-relaxed
+                                                text-gray-500
+                                            "
+                                        >
+                                            {material.description}
+                                        </p>
+
+
+                                        {/* Preview */}
 
                                         <div
                                             className="
-                                                relative
-
-                                                h-[125px]
-
+                                                mt-4
+                                                flex-1
                                                 overflow-hidden
-
-                                                rounded-md
-
-                                                bg-[#fdfdfd]
-
-                                                shadow-inner
+                                                rounded-lg
+                                                border
+                                                border-gray-100
+                                                bg-gray-50
+                                                p-3
                                             "
                                         >
 
-                                            <div className="px-3 py-2">
+                                            <div className="space-y-2">
 
-                                                {/* Título */}
+                                                <div className="h-1.5 w-[88%] rounded bg-gray-200" />
 
-                                                <div
-                                                    className="
-                                                        mb-2
+                                                <div className="h-1.5 w-full rounded bg-gray-200" />
 
-                                                        flex
-                                                        items-center
-                                                        gap-1
-                                                    "
-                                                >
+                                                <div className="h-1.5 w-[94%] rounded bg-gray-200" />
 
-                                                    <FileText
-                                                        size={10}
-                                                        className="text-purple-600"
-                                                    />
+                                                <div className="h-1.5 w-[78%] rounded bg-gray-200" />
 
-                                                    <span
-                                                        className="
-                                                            text-[8px]
-                                                            font-semibold
-                                                            text-gray-700
-                                                        "
-                                                    >
-                                                        {material.title}
-                                                    </span>
+                                                <div className="h-1.5 w-[91%] rounded bg-gray-200" />
 
-                                                </div>
-
-
-                                                {/* Descrição */}
-
-                                                <p
-                                                    className="
-                                                        text-[6px]
-                                                        leading-[1.5]
-                                                        text-gray-500
-                                                    "
-                                                >
-                                                    {material.description}
-                                                </p>
-
-
-                                                {/* Linhas */}
-
-                                                <div className="mt-2 space-y-1">
-
-                                                    <div className="h-[3px] w-full rounded bg-gray-200" />
-
-                                                    <div className="h-[3px] w-[92%] rounded bg-gray-200" />
-
-                                                    <div className="h-[3px] w-[96%] rounded bg-gray-200" />
-
-                                                    <div className="h-[3px] w-[78%] rounded bg-gray-200" />
-
-                                                    <div className="h-[3px] w-[88%] rounded bg-gray-200" />
-
-                                                </div>
+                                                <div className="h-1.5 w-[70%] rounded bg-gray-200" />
 
                                             </div>
 
+                                        </div>
 
-                                            {/* Fade inferior */}
+
+                                        {/* Rodapé */}
+
+                                        <div
+                                            className="
+                                                mt-4
+                                                flex
+                                                items-center
+                                                justify-between
+                                                border-t
+                                                border-gray-100
+                                                pt-3
+                                            "
+                                        >
 
                                             <div
                                                 className="
-                                                    pointer-events-none
-
-                                                    absolute
-                                                    bottom-0
-                                                    left-0
-                                                    right-0
-
-                                                    h-10
-
-                                                    bg-gradient-to-t
-                                                    from-white
-                                                    to-transparent
+                                                    flex
+                                                    items-center
+                                                    gap-1.5
+                                                    text-[10px]
+                                                    text-gray-400
                                                 "
-                                            />
+                                            >
+                                                <Clock3 size={12} />
+                                                {material.time}
+                                            </div>
+
+                                            <span
+                                                className="
+                                                    flex
+                                                    items-center
+                                                    gap-1
+                                                    text-[10px]
+                                                    font-medium
+                                                    text-purple-600
+                                                    transition
+                                                    group-hover:text-purple-800
+                                                "
+                                            >
+                                                Ver material
+                                                <ArrowRight size={12} />
+                                            </span>
 
                                         </div>
 
                                     </div>
 
-                                </article>
+                                </Link>
 
                             ))}
 
                         </div>
 
+
+                        {/* Mobile */}
+
+                        <Link
+                            href="/explorar"
+                            className="
+                                mt-4
+                                flex
+                                items-center
+                                gap-1
+                                text-xs
+                                font-medium
+                                text-purple-600
+                                sm:hidden
+                            "
+                        >
+                            Explorar todos
+                            <ArrowRight size={14} />
+                        </Link>
+
                     </section>
+
+
+                    {/* =================================================
+                        ESPAÇAMENTO FINAL
+                    ================================================== */}
+
+                    <div className="h-10 sm:h-14" />
 
                 </div>
 

@@ -3,36 +3,23 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
-import { login } from "@/lib/api/login";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-
-    const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
-        setError("");
+        // Showcase:
+        // não existe API, banco ou autenticação real.
         setLoading(true);
 
-        try {
-            const data = await login(email, password);
-
-            localStorage.setItem("token", data.token);
-
+        // Simula um pequeno carregamento
+        setTimeout(() => {
             window.location.href = "/home";
-        } catch (error) {
-            setError(
-                error instanceof Error
-                    ? error.message
-                    : "Erro ao realizar login."
-            );
-        } finally {
-            setLoading(false);
-        }
+        }, 700);
     }
 
     return (
@@ -41,15 +28,11 @@ export default function LoginPage() {
                 min-h-screen
                 w-full
                 bg-[#eeeeF1]
-
                 flex
                 items-center
                 justify-center
-
                 px-4
                 py-6
-
-                sm:px-6
             "
         >
             <div
@@ -57,16 +40,11 @@ export default function LoginPage() {
                     flex
                     w-full
                     max-w-[900px]
-
                     overflow-hidden
                     rounded-lg
-
                     bg-white
-
                     shadow-[0_8px_30px_rgba(0,0,0,0.15)]
-
                     min-h-[560px]
-
                     md:min-h-[500px]
                 "
             >
@@ -78,79 +56,61 @@ export default function LoginPage() {
                     className="
                         relative
                         hidden
-
                         overflow-hidden
-
                         bg-gradient-to-br
                         from-[#26005f]
                         via-[#4210c5]
                         to-[#7025ff]
-
                         text-white
-
                         md:flex
                         md:w-[32%]
-
                         md:flex-col
                         md:items-center
-
                         md:px-5
                         md:py-8
                     "
                 >
                     {/* Círculo decorativo superior */}
-
                     <div
                         className="
                             absolute
                             -left-12
                             -top-16
-
                             h-32
                             w-32
-
                             rounded-full
-
                             border-[16px]
                             border-purple-400/20
                         "
                     />
 
                     {/* Círculo decorativo inferior */}
-
                     <div
                         className="
                             absolute
                             -bottom-16
                             -right-16
-
                             h-32
                             w-32
-
                             rounded-full
-
                             border-[14px]
                             border-purple-300/10
                         "
                     />
 
                     {/* Conteúdo */}
-
                     <div
                         className="
                             relative
                             z-10
-
                             flex
                             w-full
                             flex-col
                             items-center
-
                             text-center
                         "
                     >
                         {/* Logo */}
-
                         <div
                             className="
                                 mt-5
@@ -166,14 +126,11 @@ export default function LoginPage() {
                         </div>
 
                         {/* Nome */}
-
                         <h1
                             className="
                                 mt-5
-
                                 text-[17px]
                                 font-semibold
-
                                 leading-tight
                             "
                         >
@@ -181,16 +138,12 @@ export default function LoginPage() {
                         </h1>
 
                         {/* Descrição */}
-
                         <p
                             className="
                                 mt-2
-
                                 max-w-[190px]
-
                                 text-[9px]
                                 leading-relaxed
-
                                 text-purple-100
                             "
                         >
@@ -201,16 +154,13 @@ export default function LoginPage() {
                     </div>
 
                     {/* Rodapé */}
-
                     <div
                         className="
                             absolute
                             bottom-6
                             left-0
                             right-0
-
                             px-5
-
                             text-center
                         "
                     >
@@ -235,17 +185,12 @@ export default function LoginPage() {
                         w-full
                         flex-col
                         justify-center
-
                         bg-[#faf9ff]
-
-                        px-7
+                        px-10
                         py-10
-
                         sm:px-12
-
                         md:w-[68%]
                         md:px-12
-
                         lg:px-16
                     "
                 >
@@ -256,10 +201,7 @@ export default function LoginPage() {
                             max-w-[440px]
                         "
                     >
-                        {/* ========================================= */}
                         {/* TÍTULO */}
-                        {/* ========================================= */}
-
                         <div>
                             <h2
                                 className="
@@ -267,7 +209,6 @@ export default function LoginPage() {
                                     font-bold
                                     leading-tight
                                     text-[#12004c]
-
                                     sm:text-[26px]
                                 "
                             >
@@ -277,7 +218,6 @@ export default function LoginPage() {
                             <p
                                 className="
                                     mt-0.5
-
                                     text-[10px]
                                     text-gray-600
                                 "
@@ -286,24 +226,19 @@ export default function LoginPage() {
                             </p>
                         </div>
 
-                        {/* ========================================= */}
                         {/* FORM */}
-                        {/* ========================================= */}
-
                         <form
                             onSubmit={handleSubmit}
                             className="mt-7"
                         >
                             {/* E-MAIL */}
-
                             <div>
                                 <label
                                     htmlFor="email"
                                     className="
                                         mb-1
                                         block
-
-                                        text-[10px]
+                                        text-[12px]
                                         font-medium
                                         text-gray-700
                                     "
@@ -318,29 +253,21 @@ export default function LoginPage() {
                                     onChange={(event) =>
                                         setEmail(event.target.value)
                                     }
-                                    placeholder=""
+                                    placeholder="seu@email.com"
                                     required
                                     autoComplete="email"
                                     className="
                                         h-10
                                         w-full
-
                                         rounded-md
-
                                         border
                                         border-gray-300
-
                                         bg-white
-
                                         px-3
-
                                         text-xs
                                         text-gray-900
-
                                         outline-none
-
                                         transition
-
                                         focus:border-purple-600
                                         focus:ring-1
                                         focus:ring-purple-600
@@ -349,15 +276,13 @@ export default function LoginPage() {
                             </div>
 
                             {/* SENHA */}
-
                             <div className="mt-5">
                                 <label
                                     htmlFor="password"
                                     className="
                                         mb-1
                                         block
-
-                                        text-[10px]
+                                        text-[12px]
                                         font-medium
                                         text-gray-700
                                     "
@@ -372,114 +297,65 @@ export default function LoginPage() {
                                     onChange={(event) =>
                                         setPassword(event.target.value)
                                     }
-                                    placeholder=""
+                                    placeholder="••••••••"
                                     required
-                                    minLength={8}
                                     autoComplete="current-password"
                                     className="
                                         h-10
                                         w-full
-
                                         rounded-md
-
                                         border
                                         border-gray-300
-
                                         bg-white
-
                                         px-3
-
                                         text-xs
                                         text-gray-900
-
                                         outline-none
-
                                         transition
-
                                         focus:border-purple-600
                                         focus:ring-1
                                         focus:ring-purple-600
                                     "
                                 />
 
-                                {/* Esqueci senha */}
-
-                                <div className="mt-1">
+                                {/* Esqueci minha senha */}
+                                {/*<div className="mt-1">
                                     <Link
                                         href="/recuperar-senha"
                                         className="
-                                            text-[9px]
+                                            font-medium
+                                            text-[10px]
                                             text-purple-600
-
                                             hover:underline
                                         "
                                     >
                                         Esqueci minha senha
                                     </Link>
-                                </div>
+                                </div>*/}
                             </div>
 
-                            {/* ===================================== */}
-                            {/* ERRO */}
-                            {/* ===================================== */}
-
-                            {error && (
-                                <div
-                                    className="
-                                        mt-4
-
-                                        rounded-md
-
-                                        border
-                                        border-red-200
-
-                                        bg-red-50
-
-                                        px-3
-                                        py-2
-
-                                        text-[10px]
-                                        text-red-600
-                                    "
-                                >
-                                    {error}
-                                </div>
-                            )}
-
-                            {/* ===================================== */}
                             {/* BOTÃO */}
-                            {/* ===================================== */}
-
                             <button
                                 type="submit"
                                 disabled={loading}
                                 className="
                                     mx-auto
                                     mt-5
-
                                     flex
                                     h-10
                                     w-full
-
                                     items-center
                                     justify-center
-
                                     rounded-lg
-
                                     bg-purple-600
-
                                     text-xs
                                     font-medium
                                     text-white
-
                                     transition
-
                                     hover:bg-purple-700
-
                                     focus:outline-none
                                     focus:ring-2
                                     focus:ring-purple-600/30
-
                                     disabled:cursor-not-allowed
                                     disabled:opacity-60
                                 "
@@ -490,14 +366,10 @@ export default function LoginPage() {
                             </button>
                         </form>
 
-                        {/* ========================================= */}
                         {/* DIVISOR */}
-                        {/* ========================================= */}
-
                         <div
                             className="
                                 my-5
-
                                 flex
                                 items-center
                                 gap-4
@@ -529,15 +401,12 @@ export default function LoginPage() {
                             />
                         </div>
 
-                        {/* ========================================= */}
                         {/* CADASTRO */}
-                        {/* ========================================= */}
-
                         <p
                             className="
+                                font-medium
                                 text-center
-
-                                text-[9px]
+                                text-[11px]
                                 text-gray-600
                             "
                         >
@@ -546,9 +415,8 @@ export default function LoginPage() {
                             <Link
                                 href="/signup"
                                 className="
-                                    font-medium
+                                    font-bold
                                     text-purple-600
-
                                     hover:underline
                                 "
                             >
@@ -557,25 +425,11 @@ export default function LoginPage() {
                         </p>
                     </div>
                 </section>
-
-                {/* ================================================= */}
-                {/* HEADER MOBILE */}
-                {/* ================================================= */}
-
-                <div
-                    className="
-                        absolute
-                        left-4
-                        top-4
-
-                        hidden
-                    "
-                />
             </div>
 
-            {/* ===================================================== */}
-            {/* VERSÃO MOBILE DO PAINEL */}
-            {/* ===================================================== */}
+            {/* ================================================= */}
+            {/* VERSÃO MOBILE */}
+            {/* ================================================= */}
 
             <div
                 className="
@@ -583,20 +437,14 @@ export default function LoginPage() {
                     left-0
                     right-0
                     top-0
-
                     flex
                     h-[72px]
-
                     items-center
-
                     bg-gradient-to-r
                     from-[#26005f]
                     to-[#5c20e8]
-
                     px-5
-
                     text-white
-
                     md:hidden
                 "
             >
