@@ -1,7 +1,7 @@
 "use client";
 
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 
 import {
@@ -30,6 +30,7 @@ import {
 
 
 import Navbar from "@/components/navbar";
+import { changePassword, getMe, updateUser, type Address, type UserProfile as ApiUser } from "@/lib/api/perfil";
 
 
 type UserProfile = {
@@ -50,35 +51,40 @@ type UserProfile = {
 
 
 const initialUser: UserProfile = {
- id: 1,
- cpf: "123.456.789-00",
- firstName: "Eliza",
- lastName: "Medeiros",
- email: "eliza.medeiros@email.com",
- phoneNumber: "(83) 99999-9999",
- course: "Análise e Desenvolvimento de Sistemas",
- role: "ROLE_STUDENT",
- createdAt: "2026-03-15",
+ id: 0,
+ cpf: "",
+ firstName: "",
+ lastName: "",
+ email: "",
+ phoneNumber: "",
+ course: "",
+ role: "",
+ createdAt: new Date().toISOString().slice(0, 10),
  isActive: true,
- city: "Patos",
- state: "PB",
+ city: "",
+ state: "",
  profileImage: null,
 };
 
 
-/*
-* GET /v1/api/users/me
-*
-* PUT /v1/api/users/me
-*
-* POST /v1/api/users/change-password
-*
-* Foto de perfil:
-*
-* const formData = new FormData();
-* formData.append("profileImage", file);
-*
-*/
+// Adapta o UserResponse da API ao formato da tela (data sem hora, cidade/estado do endereço)
+function toProfile(api: ApiUser, profileImage: string | null): UserProfile {
+ return {
+   id: api.id,
+   cpf: api.cpf,
+   firstName: api.firstName,
+   lastName: api.lastName,
+   email: api.email,
+   phoneNumber: api.phoneNumber,
+   course: api.course,
+   role: api.role,
+   createdAt: api.createdAt.slice(0, 10),
+   isActive: api.isActive,
+   city: api.address?.city ?? "",
+   state: api.address?.state ?? "",
+   profileImage,
+ };
+}
 
 
 function getRoleLabel(role: string) {
@@ -87,8 +93,8 @@ function getRoleLabel(role: string) {
      return "Estudante";
 
 
-   case "ROLE_TEACHER":
-     return "Professor";
+   case "ROLE_MODERATOR":
+     return "Moderador";
 
 
    case "ROLE_ADMIN":
@@ -103,6 +109,18 @@ function getRoleLabel(role: string) {
 
 export default function PerfilPage() {
  const [user, setUser] = useState<UserProfile>(initialUser);
+ const [address, setAddress] = useState<Address | null>(null);
+ const [saving, setSaving] = useState(false);
+
+
+ useEffect(() => {
+   getMe()
+     .then((me) => {
+       setUser(toProfile(me, null));
+       setAddress(me.address);
+     })
+     .catch(() => undefined);
+ }, []);
 
 
  const [editModalOpen, setEditModalOpen] = useState(false);
@@ -245,36 +263,30 @@ export default function PerfilPage() {
  }
 
 
- function handleSaveProfile() {
-   /*
-    * API futuramente:
-    *
-    * const updatedUser = await updateProfile(
-    *   token,
-    *   formData
-    * );
-    *
-    * setUser(updatedUser);
-    *
-    * await updateProfileImage(token, selectedImageFile);
-    */
+ async function handleSaveProfile() {
+   setSaving(true);
 
+   try {
+     // Foto de perfil não tem backend: fica só na tela
+     const updated = await updateUser(user.id, {
+       firstName: formData.firstName.trim(),
+       lastName: formData.lastName.trim(),
+       phoneNumber: formData.phoneNumber.trim(),
+       course: formData.course.trim(),
+       address: address
+         ? { ...address, city: formData.city.trim(), state: formData.state.trim() }
+         : undefined,
+     });
 
-   setUser((current) => ({
-     ...current,
-     firstName: formData.firstName,
-     lastName: formData.lastName,
-     email: formData.email,
-     phoneNumber: formData.phoneNumber,
-     course: formData.course,
-     city: formData.city,
-     state: formData.state,
-     profileImage: profileImage,
-   }));
-
-
-   setSelectedImageFile(null);
-   setEditModalOpen(false);
+     setUser(toProfile(updated, profileImage));
+     setAddress(updated.address);
+     setSelectedImageFile(null);
+     setEditModalOpen(false);
+   } catch (error) {
+     alert(error instanceof Error ? error.message : "Não foi possível salvar o perfil.");
+   } finally {
+     setSaving(false);
+   }
  }
 
 
@@ -314,7 +326,7 @@ export default function PerfilPage() {
  }
 
 
- function handleChangePassword() {
+ async function handleChangePassword() {
    setPasswordError("");
    setPasswordSuccess(false);
 
@@ -331,9 +343,9 @@ export default function PerfilPage() {
    }
 
 
-   if (passwordData.newPassword.length < 6) {
+   if (passwordData.newPassword.length < 8) {
      setPasswordError(
-       "A nova senha deve possuir pelo menos 6 caracteres."
+       "A nova senha deve possuir pelo menos 8 caracteres."
      );
      return;
    }
@@ -366,9 +378,15 @@ export default function PerfilPage() {
     */
 
 
+   try {
+     await changePassword(passwordData.currentPassword, passwordData.newPassword);
+   } catch (error) {
+     setPasswordError(error instanceof Error ? error.message : "Não foi possível alterar a senha.");
+     return;
+   }
+
+
    setPasswordSuccess(true);
-
-
    setPasswordData({
      currentPassword: "",
      newPassword: "",
@@ -890,16 +908,6 @@ export default function PerfilPage() {
 
 
                <EditField
-                 label="E-mail"
-                 type="email"
-                 value={formData.email}
-                 onChange={(value) =>
-                   handleInputChange("email", value)
-                 }
-               />
-
-
-               <EditField
                  label="Telefone"
                  value={formData.phoneNumber}
                  onChange={(value) =>
@@ -993,6 +1001,7 @@ export default function PerfilPage() {
              <button
                type="button"
                onClick={handleSaveProfile}
+               disabled={saving}
                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
              >
                <Save size={16} />
