@@ -52,7 +52,8 @@ public class TokenService {
                 .claim("role", role)
                 .issuedAt(now)
                 .expiration(expiration)
-                .signWith(getSigningKey())
+                // HS256 fixo: o JwtDecoder do SecurityConfig só aceita HS256 (sem isso, segredos >= 64 bytes viram HS512)
+                .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
     }
 

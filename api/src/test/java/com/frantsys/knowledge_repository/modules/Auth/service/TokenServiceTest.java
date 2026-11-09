@@ -1,5 +1,6 @@
 package com.frantsys.knowledge_repository.modules.Auth.service;
 
+import com.frantsys.knowledge_repository.config.SecurityConfig;
 import com.frantsys.knowledge_repository.modules.User.model.User;
 import com.frantsys.knowledge_repository.modules.User.model.UserRole;
 
@@ -52,4 +53,17 @@ class TokenServiceTest {
         assertThat(tokenService.isTokenValid(expiredToken)).isFalse();
     }
 
+    @Test
+    @DisplayName("generateToken should be accepted by the API's JwtDecoder even with a long (>= 64 bytes) secret")
+    void generateToken_shouldBeAcceptedByJwtDecoderWithLongSecret() {
+        String longSecret = "a".repeat(86);
+        ReflectionTestUtils.setField(tokenService, "secret", longSecret);
+
+        SecurityConfig securityConfig = new SecurityConfig();
+        ReflectionTestUtils.setField(securityConfig, "secret", longSecret);
+
+        String token = tokenService.generateToken(user);
+
+        assertThat(securityConfig.jwtDecoder().decode(token).getSubject()).isEqualTo("student@example.com");
+    }
 }
