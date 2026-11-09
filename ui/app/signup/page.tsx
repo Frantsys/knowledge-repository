@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createUser } from "@/lib/api/signup";
 import {
   BookOpen,
   Search,
@@ -12,12 +13,39 @@ import {
   EyeOff,
 } from "lucide-react";
 
+const INPUT_CLASS =
+  "h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-purple-600 outline-none transition focus:border-purple-600 focus:ring-1 focus:ring-purple-600";
+
+// Máscaras nos formatos que a API valida: CPF 000.000.000-00 e CEP 00000-000
+function maskCpf(value: string) {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function maskCep(value: string) {
+  return value.replace(/\D/g, "").slice(0, 8).replace(/(\d{5})(\d)/, "$1-$2");
+}
+
+const ADDRESS_FIELDS: { name: string; label: string; placeholder?: string }[] = [
+  { name: "zipcode", label: "CEP", placeholder: "00000-000" },
+  { name: "street", label: "Rua" },
+  { name: "number", label: "Número" },
+  { name: "district", label: "Bairro" },
+  { name: "city", label: "Cidade" },
+  { name: "state", label: "Estado" },
+];
+
 export default function Signup() {
   const router = useRouter();
 
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -48,44 +76,39 @@ export default function Signup() {
       return;
     }
 
-    const userData = {
-      firstName: formData.get("firstName"),
-      lastName: formData.get("lastName"),
-      email: email,
-      password: password,
-      cpf: formData.get("cpf"),
-      phoneNumber: formData.get("phoneNumber"),
-      course: formData.get("course"),
-    };
+    const field = (name: string) => String(formData.get(name) ?? "").trim();
+
+    setSubmitting(true);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/v1/api/auth/register`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(userData),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.text();
-
-        console.error("Erro ao criar usuário:", error);
-
-        alert("Não foi possível criar a conta.");
-        return;
-      }
+      await createUser({
+        firstName: field("firstName"),
+        lastName: field("lastName"),
+        email,
+        password,
+        cpf: field("cpf"),
+        phoneNumber: field("phoneNumber"),
+        gender: field("gender"),
+        course: field("course"),
+        birthDate: field("birthDate"),
+        address: {
+          country: field("country"),
+          state: field("state"),
+          city: field("city"),
+          street: field("street"),
+          number: field("number"),
+          district: field("district"),
+          zipcode: field("zipcode"),
+        },
+      });
 
       alert("Conta criada com sucesso!");
 
       router.push("/login");
     } catch (error) {
-      console.error("Erro de conexão:", error);
-
-      alert("Não foi possível conectar ao servidor.");
+      alert(error instanceof Error ? error.message : "Não foi possível criar a conta.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -248,6 +271,7 @@ export default function Signup() {
                     id="lastName"
                     name="lastName"
                     type="text"
+                    required
                     className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-purple-600 outline-none transition focus:border-purple-600 focus:ring-1 focus:ring-purple-600"
                   />
                 </div>
@@ -397,7 +421,12 @@ export default function Signup() {
                     id="cpf"
                     name="cpf"
                     type="text"
+                    required
+                    inputMode="numeric"
                     placeholder="000.000.000-00"
+                    onChange={(event) => {
+                      event.target.value = maskCpf(event.target.value);
+                    }}
                     className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-purple-600 outline-none transition focus:border-purple-600 focus:ring-1 focus:ring-purple-600"
                   />
                 </div>
@@ -414,6 +443,7 @@ export default function Signup() {
                     id="phoneNumber"
                     name="phoneNumber"
                     type="tel"
+                    required
                     placeholder="(00) 00000-0000"
                     className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-purple-600 outline-none transition focus:border-purple-600 focus:ring-1 focus:ring-purple-600"
                   />
@@ -434,9 +464,77 @@ export default function Signup() {
                   id="course"
                   name="course"
                   type="text"
-                  className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-purple-600 outline-none transition focus:border-purple-600 focus:ring-1 focus:ring-purple-600"
+                  required
+                  className={INPUT_CLASS}
                 />
               </div>
+
+              <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="gender" className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Gênero
+                  </label>
+
+                  <select id="gender" name="gender" required defaultValue="" className={INPUT_CLASS}>
+                    <option value="" disabled>Selecione</option>
+                    <option value="Feminino">Feminino</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Outro">Outro</option>
+                    <option value="Prefiro não informar">Prefiro não informar</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="birthDate" className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Data de nascimento
+                  </label>
+
+                  <input
+                    id="birthDate"
+                    name="birthDate"
+                    type="date"
+                    required
+                    max={new Date().toISOString().slice(0, 10)}
+                    className={INPUT_CLASS}
+                  />
+                </div>
+              </div>
+
+              <fieldset className="mb-6">
+                <legend className="mb-3 text-sm font-semibold text-gray-800">Endereço</legend>
+
+                <input type="hidden" name="country" value="Brasil" />
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {ADDRESS_FIELDS.map((addressField) => (
+                    <div key={addressField.name}>
+                      <label
+                        htmlFor={addressField.name}
+                        className="mb-1.5 block text-sm font-medium text-gray-700"
+                      >
+                        {addressField.label}
+                      </label>
+
+                      <input
+                        id={addressField.name}
+                        name={addressField.name}
+                        type="text"
+                        required
+                        placeholder={addressField.placeholder}
+                        inputMode={addressField.name === "zipcode" ? "numeric" : undefined}
+                        onChange={
+                          addressField.name === "zipcode"
+                            ? (event) => {
+                                event.target.value = maskCep(event.target.value);
+                              }
+                            : undefined
+                        }
+                        className={INPUT_CLASS}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </fieldset>
 
 
               <div className="mb-5 flex items-start gap-2">
@@ -470,9 +568,10 @@ export default function Signup() {
 
               <button
                 type="submit"
-                className="h-11 w-full rounded-lg bg-purple-600 font-medium text-white transition hover:bg-purple-700"
+                disabled={submitting}
+                className="h-11 w-full rounded-lg bg-purple-600 font-medium text-white transition hover:bg-purple-700 disabled:opacity-60"
               >
-                Criar conta
+                {submitting ? "Criando conta..." : "Criar conta"}
               </button>
 
             </form>

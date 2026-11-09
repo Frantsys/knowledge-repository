@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { clearToken, getToken } from "@/lib/api/client";
+import { getMe, type UserProfile } from "@/lib/api/perfil";
+import { createMaterial } from "@/lib/api/materials";
+import { uploadFile } from "@/lib/api/files";
 
 import {
   BookOpen,
@@ -26,6 +30,29 @@ import { AnimatePresence, motion } from "motion/react";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const [me, setMe] = useState<UserProfile | null>(null);
+  const userName = me?.firstName ?? "";
+  const userInitial = userName.charAt(0).toUpperCase();
+
+  // Publicar material
+  const [publishTitle, setPublishTitle] = useState("");
+  const [publishBody, setPublishBody] = useState("");
+  const [publishSubject, setPublishSubject] = useState("");
+  const [publishFile, setPublishFile] = useState<File | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  // Toda página logada renderiza a navbar: sem token, volta para o login
+  useEffect(() => {
+    if (!getToken()) {
+      window.location.href = "/login";
+      return;
+    }
+
+    getMe().then(setMe).catch(() => setMe(null));
+  }, []);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -138,7 +165,38 @@ export default function Navbar() {
     setMenuOpen(false);
     setNotificationsOpen(false);
     setProfileOpen(false);
+    setPublishError(null);
     setPublishModalOpen(true);
+  }
+
+  async function handlePublish() {
+    setPublishing(true);
+    setPublishError(null);
+
+    try {
+      const material = await createMaterial({
+        title: publishTitle.trim(),
+        body: publishBody.trim(),
+        subject: publishSubject,
+        course: me?.course ?? publishSubject,
+      });
+
+      if (publishFile) {
+        await uploadFile(material.id, publishFile);
+      }
+
+      setPublishModalOpen(false);
+      setPublishTitle("");
+      setPublishBody("");
+      setPublishSubject("");
+      setPublishFile(null);
+
+      router.push(`/materiais/${material.id}`);
+    } catch (error) {
+      setPublishError(error instanceof Error ? error.message : "Não foi possível publicar.");
+    } finally {
+      setPublishing(false);
+    }
   }
 
   /*
@@ -148,7 +206,7 @@ export default function Navbar() {
    */
 
   function handleLogout() {
-    localStorage.removeItem("token");
+    clearToken();
 
     window.location.href = "/login";
   }
@@ -629,11 +687,11 @@ export default function Navbar() {
                     text-white
                   "
                 >
-                  G
+                  {userInitial}
                 </div>
 
                 <span className="hidden text-xs font-medium lg:inline">
-                  Gilberto
+                  {userName}
                 </span>
 
                 <motion.div
@@ -722,12 +780,12 @@ export default function Navbar() {
                           text-white
                         "
                       >
-                        G
+                        {userInitial}
                       </div>
 
                       <div className="min-w-0">
                         <p className="truncate text-xs font-semibold text-gray-900">
-                          Gilberto
+                          {userName}
                         </p>
 
                         <p className="truncate text-[11px] text-gray-500">
@@ -1037,12 +1095,12 @@ export default function Navbar() {
                       text-white
                     "
                   >
-                    G
+                    {userInitial}
                   </div>
 
                   <div>
                     <p className="text-sm font-medium text-gray-800">
-                      Gilberto
+                      {userName}
                     </p>
 
                     <p className="text-xs text-gray-500">
@@ -1225,6 +1283,8 @@ export default function Navbar() {
                   <input
                     id="material-title"
                     type="text"
+                    value={publishTitle}
+                    onChange={(event) => setPublishTitle(event.target.value)}
                     placeholder="Ex.: Resumo de Direito Penal"
                     className="
                       h-10
@@ -1265,6 +1325,8 @@ export default function Navbar() {
                   <textarea
                     id="material-description"
                     rows={3}
+                    value={publishBody}
+                    onChange={(event) => setPublishBody(event.target.value)}
                     placeholder="Descreva brevemente o material..."
                     className="
                       w-full
@@ -1321,29 +1383,30 @@ export default function Navbar() {
                       focus:ring-2
                       focus:ring-purple-500/10
                     "
-                    defaultValue=""
+                    value={publishSubject}
+                    onChange={(event) => setPublishSubject(event.target.value)}
                   >
                     <option value="" disabled>
                       Selecione uma categoria
                     </option>
 
-                    <option value="direito">
+                    <option value="Direito">
                       Direito
                     </option>
 
-                    <option value="tecnologia">
+                    <option value="Tecnologia">
                       Tecnologia
                     </option>
 
-                    <option value="administracao">
+                    <option value="Administração">
                       Administração
                     </option>
 
-                    <option value="engenharia">
+                    <option value="Engenharia">
                       Engenharia
                     </option>
 
-                    <option value="outros">
+                    <option value="Outros">
                       Outros
                     </option>
                   </select>
@@ -1401,7 +1464,7 @@ export default function Navbar() {
                     </div>
 
                     <p className="text-xs font-medium text-gray-700">
-                      Clique para selecionar um arquivo
+                      {publishFile ? publishFile.name : "Clique para selecionar um arquivo"}
                     </p>
 
                     <p className="mt-1 text-[11px] text-gray-400">
@@ -1411,11 +1474,19 @@ export default function Navbar() {
                     <input
                       id="material-file"
                       type="file"
+                      accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.zip"
+                      onChange={(event) => setPublishFile(event.target.files?.[0] ?? null)}
                       className="hidden"
                     />
                   </label>
                 </div>
               </div>
+
+              {publishError && (
+                <p role="alert" className="whitespace-pre-line px-5 pb-3 text-xs text-red-600 sm:px-6">
+                  {publishError}
+                </p>
+              )}
 
               {/* ===========================================
                   RODAPÉ
@@ -1455,6 +1526,8 @@ export default function Navbar() {
 
                 <motion.button
                   type="button"
+                  onClick={handlePublish}
+                  disabled={publishing || !publishTitle.trim() || !publishBody.trim() || !publishSubject}
                   whileTap={{
                     scale: 0.97,
                   }}
@@ -1472,11 +1545,13 @@ export default function Navbar() {
                     text-white
                     transition
                     hover:bg-purple-700
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
                   "
                 >
                   <Upload size={15} />
 
-                  Publicar material
+                  {publishing ? "Publicando..." : "Publicar material"}
                 </motion.button>
               </div>
             </motion.div>

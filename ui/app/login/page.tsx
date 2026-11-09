@@ -3,23 +3,28 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
+import { login } from "@/lib/api/login";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
 
-    function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const [error, setError] = useState<string | null>(null);
+
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
-        // Showcase:
-        // não existe API, banco ou autenticação real.
         setLoading(true);
+        setError(null);
 
-        // Simula um pequeno carregamento
-        setTimeout(() => {
+        try {
+            await login(email, password);
             window.location.href = "/home";
-        }, 700);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Não foi possível entrar.");
+            setLoading(false);
+        }
     }
 
     return (
@@ -333,6 +338,12 @@ export default function LoginPage() {
                                     </Link>
                                 </div>*/}
                             </div>
+
+                            {error && (
+                                <p role="alert" className="mt-4 text-center text-xs text-red-600">
+                                    {error}
+                                </p>
+                            )}
 
                             {/* BOTÃO */}
                             <button
