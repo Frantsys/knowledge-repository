@@ -3,6 +3,7 @@ package com.frantsys.knowledge_repository.modules.File.storage;
 import com.frantsys.knowledge_repository.exception.BusinessException;
 import com.frantsys.knowledge_repository.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 @Service
+@ConditionalOnProperty(name = "app.storage.type", havingValue = "local", matchIfMissing = true)
 public class LocalFileSystemStorageService implements StorageService {
 
     private final Path root;
