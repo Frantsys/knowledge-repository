@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -16,107 +16,14 @@ import {
 } from "lucide-react";
 
 import Navbar from "@/components/navbar";
-
-type Material = {
-    id: number;
-    title: string;
-    body: string;
-    subject: string;
-    course: string;
-    createdBy: string;
-    createdAt: string;
-};
-
-const mockMaterials: Material[] = [
-    {
-        id: 1,
-        title: "Introdução à Programação Orientada a Objetos",
-        body: "Material introdutório sobre os principais conceitos de POO, incluindo classes, objetos, atributos e métodos.",
-        subject: "Programação",
-        course: "Análise e Desenvolvimento de Sistemas",
-        createdBy: "Maria Silva",
-        createdAt: "2026-09-20",
-    },
-    {
-        id: 2,
-        title: "Banco de Dados — Modelo Relacional",
-        body: "Resumo sobre tabelas, relacionamentos, chaves primárias, chaves estrangeiras e normalização.",
-        subject: "Banco de Dados",
-        course: "Análise e Desenvolvimento de Sistemas",
-        createdBy: "João Santos",
-        createdAt: "2026-09-18",
-    },
-    {
-        id: 3,
-        title: "Fundamentos de Desenvolvimento Web",
-        body: "Material com conceitos fundamentais de HTML, CSS, JavaScript e funcionamento de aplicações web.",
-        subject: "Desenvolvimento Web",
-        course: "Sistemas para Internet",
-        createdBy: "Ana Costa",
-        createdAt: "2026-09-16",
-    },
-    {
-        id: 4,
-        title: "Engenharia de Software — Ciclo de Vida",
-        body: "Resumo sobre processos de desenvolvimento, modelos de ciclo de vida e etapas de um projeto de software.",
-        subject: "Engenharia de Software",
-        course: "Análise e Desenvolvimento de Sistemas",
-        createdBy: "Lucas Oliveira",
-        createdAt: "2026-09-14",
-    },
-    {
-        id: 5,
-        title: "SQL para Iniciantes",
-        body: "Introdução aos principais comandos SQL para consulta, inserção, atualização e exclusão de dados.",
-        subject: "Banco de Dados",
-        course: "Análise e Desenvolvimento de Sistemas",
-        createdBy: "Carlos Souza",
-        createdAt: "2026-09-12",
-    },
-    {
-        id: 6,
-        title: "Classes e Objetos em Java",
-        body: "Material prático sobre criação de classes, objetos, construtores, encapsulamento e métodos em Java.",
-        subject: "Programação",
-        course: "Ciência da Computação",
-        createdBy: "Fernanda Lima",
-        createdAt: "2026-09-10",
-    },
-    {
-        id: 7,
-        title: "React — Componentes e Props",
-        body: "Introdução aos componentes React, propriedades, composição e organização de interfaces.",
-        subject: "Desenvolvimento Web",
-        course: "Sistemas para Internet",
-        createdBy: "Pedro Almeida",
-        createdAt: "2026-09-08",
-    },
-    {
-        id: 8,
-        title: "Levantamento de Requisitos",
-        body: "Conceitos e técnicas utilizadas para identificar, documentar e validar requisitos de software.",
-        subject: "Engenharia de Software",
-        course: "Análise e Desenvolvimento de Sistemas",
-        createdBy: "Beatriz Martins",
-        createdAt: "2026-09-05",
-    },
-];
-
-const subjects = [
-    "Todas",
-    "Programação",
-    "Banco de Dados",
-    "Engenharia de Software",
-    "Desenvolvimento Web",
-];
+import { listMaterials, type Material } from "@/lib/api/materials";
 
 function formatDate(date: string) {
     return new Intl.DateTimeFormat("pt-BR", {
         day: "2-digit",
         month: "short",
         year: "numeric",
-        timeZone: "UTC",
-    }).format(new Date(`${date}T00:00:00Z`));
+    }).format(new Date(date));
 }
 
 export default function ExplorarPage() {
@@ -128,23 +35,25 @@ export default function ExplorarPage() {
     const [order, setOrder] = useState("recentes");
     const [filtersOpen, setFiltersOpen] = useState(false);
 
-    /*
-- Integração futura com a API:
-     *
-- import { getMaterials } from "@/lib/explorar";
-     *
-- Substituir mockMaterials pelos dados retornados por getMaterials().
-- Manter busca, filtros e ordenação funcionando sobre os dados da API.
-- Considerar estados de carregamento, erro e lista vazia na integração.
-     *
-- Perfil do autor:
-- Quando a API de usuários estiver conectada, usar o identificador do autor
-- retornado pelo material para abrir o perfil público correspondente.
-- Não depender do nome do autor como identificador permanente.
-     */
+    const [materials, setMaterials] = useState<Material[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+
+    // shortcut: busca/filtro no cliente sobre os 100 mais recentes; criar busca no servidor quando houver muitos materiais
+    useEffect(() => {
+        listMaterials(100)
+            .then((page) => setMaterials(page.content.filter((material) => material.isActive)))
+            .catch((error: Error) => setLoadError(error.message))
+            .finally(() => setLoading(false));
+    }, []);
+
+    const subjects = useMemo(
+        () => ["Todas", ...new Set(materials.map((material) => material.subject))],
+        [materials]
+    );
 
     const filteredMaterials = useMemo(() => {
-        let result = [...mockMaterials];
+        let result = [...materials];
 
         if (selectedSubject !== "Todas") {
             result = result.filter(
@@ -179,7 +88,7 @@ export default function ExplorarPage() {
         }
 
         return result;
-    }, [submittedSearch, selectedSubject, order]);
+    }, [materials, submittedSearch, selectedSubject, order]);
 
     const activeFiltersCount =
         Number(selectedSubject !== "Todas") +
@@ -383,7 +292,14 @@ export default function ExplorarPage() {
                             )}
                         </div>
 
-                        {filteredMaterials.length > 0 ? (
+                        {loading || loadError ? (
+                            <p
+                                role={loadError ? "alert" : "status"}
+                                className={`rounded-2xl border border-gray-200 bg-white px-5 py-14 text-center text-sm shadow-sm ${loadError ? "text-red-600" : "text-gray-500"}`}
+                            >
+                                {loadError ?? "Carregando materiais..."}
+                            </p>
+                        ) : filteredMaterials.length > 0 ? (
                             <div className="grid gap-4 md:grid-cols-2">
                                 {filteredMaterials.map((material) => (
                                     <Link

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import {
@@ -9,49 +9,10 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { getMaterial, updateMaterial, type Material } from "@/lib/api/materials";
+import { listFiles, uploadFile } from "@/lib/api/files";
 
-const materiais = [
-  {
-    id: "1",
-    title: "Resumo de Direito Penal",
-    category: "direito",
-    categoryLabel: "Direito",
-    description:
-      "Resumo dos principais conceitos de Direito Penal para revisão acadêmica.",
-    image: "/images/direito.jpg",
-    file: "resumo-direito-penal.pdf",
-  },
-  {
-    id: "2",
-    title: "Resumo de Banco de Dados",
-    category: "tecnologia",
-    categoryLabel: "Tecnologia",
-    description:
-      "Material com os principais conceitos de banco de dados, SQL e modelagem.",
-    image: "/images/banco.jpg",
-    file: "resumo-banco-de-dados.pdf",
-  },
-  {
-    id: "3",
-    title: "Introdução à Programação",
-    category: "tecnologia",
-    categoryLabel: "Tecnologia",
-    description:
-      "Material introdutório sobre lógica de programação e conceitos fundamentais.",
-    image: "/images/programacao.jpg",
-    file: "introducao-programacao.pdf",
-  },
-  {
-    id: "4",
-    title: "Engenharia de Software",
-    category: "engenharia",
-    categoryLabel: "Engenharia",
-    description:
-      "Resumo sobre processos, metodologias e conceitos de Engenharia de Software.",
-    image: "/images/engenharia.jpg",
-    file: "engenharia-software.pdf",
-  },
-];
+const CATEGORIES = ["Direito", "Tecnologia", "Administração", "Engenharia", "Outros"];
 
 export default function EditarMaterialPage() {
   const router = useRouter();
@@ -59,18 +20,40 @@ export default function EditarMaterialPage() {
 
   const id = String(params.id);
 
-  const material = materiais.find(
-    (material) => material.id === id
-  );
+  const [material, setMaterial] = useState<Material | null>(null);
+  const [currentFileName, setCurrentFileName] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [title, setTitle] = useState(material?.title ?? "");
-  const [description, setDescription] = useState(
-    material?.description ?? ""
-  );
-  const [category, setCategory] = useState(
-    material?.category ?? ""
-  );
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
   const [file, setFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    Promise.all([
+      getMaterial(id).then((data) => {
+        setMaterial(data);
+        setTitle(data.title);
+        setDescription(data.body);
+        setCategory(data.subject);
+      }),
+      listFiles(id).then((page) => setCurrentFileName(page.content[0]?.name ?? null)),
+    ])
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50">
+        <p role="status" className="py-24 text-center text-sm text-gray-500">
+          Carregando material...
+        </p>
+      </main>
+    );
+  }
 
   if (!material) {
     return (
@@ -86,7 +69,7 @@ export default function EditarMaterialPage() {
             </p>
 
             <button
-              onClick={() => router.push("/materiais")}
+              onClick={() => router.push("/meusmateriais")}
               className="
                 mt-5
                 rounded-lg
@@ -108,21 +91,29 @@ export default function EditarMaterialPage() {
     );
   }
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
-    // Futuramente:
-    // PUT/PATCH para atualizar o material na API.
+    setSaving(true);
+    setError(null);
 
-    console.log({
-      id,
-      title,
-      description,
-      category,
-      file,
-    });
+    try {
+      await updateMaterial(id, {
+        title: title.trim(),
+        body: description.trim(),
+        subject: category,
+        course: material!.course,
+      });
 
-    router.push(`/materiais/${id}`);
+      if (file) {
+        await uploadFile(id, file);
+      }
+
+      router.push(`/materiais/${id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível salvar.");
+      setSaving(false);
+    }
   }
 
   return (
@@ -367,25 +358,29 @@ export default function EditarMaterialPage() {
                   Selecione uma categoria
                 </option>
 
-                <option value="direito">
+                <option value="Direito">
                   Direito
                 </option>
 
-                <option value="tecnologia">
+                <option value="Tecnologia">
                   Tecnologia
                 </option>
 
-                <option value="administracao">
+                <option value="Administração">
                   Administração
                 </option>
 
-                <option value="engenharia">
+                <option value="Engenharia">
                   Engenharia
                 </option>
 
-                <option value="outros">
+                <option value="Outros">
                   Outros
                 </option>
+
+                {category && !CATEGORIES.includes(category) && (
+                  <option value={category}>{category}</option>
+                )}
               </select>
             </div>
 
@@ -420,10 +415,10 @@ export default function EditarMaterialPage() {
               >
                 <div className="min-w-0">
                   <p className="truncate text-xs font-medium text-gray-700">
-                    {file?.name ?? material.file}
+                    {file?.name ?? currentFileName ?? "Nenhum arquivo anexado"}
                   </p>
 
-                  {!file && (
+                  {!file && currentFileName && (
                     <p className="mt-0.5 text-[11px] text-gray-400">
                       Arquivo atual
                     </p>
@@ -529,8 +524,15 @@ export default function EditarMaterialPage() {
               Cancelar
             </button>
 
+            {error && (
+              <p role="alert" className="whitespace-pre-line text-xs text-red-600 sm:mr-auto">
+                {error}
+              </p>
+            )}
+
             <motion.button
               type="submit"
+              disabled={saving}
               whileTap={{
                 scale: 0.97,
               }}
@@ -552,7 +554,7 @@ export default function EditarMaterialPage() {
             >
               <Save size={15} />
 
-              Salvar alterações
+              {saving ? "Salvando..." : "Salvar alterações"}
             </motion.button>
           </div>
         </motion.form>

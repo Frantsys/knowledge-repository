@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import {
     ArrowRight,
@@ -14,79 +15,52 @@ import {
 } from "lucide-react";
 
 import Navbar from "@/components/navbar";
+import { listMaterials, listMyMaterials, type Material } from "@/lib/api/materials";
+import { getMe } from "@/lib/api/perfil";
 
-const materiaisAcessados = [
-    {
-        id: 1,
-        title: "Resumo de Banco de Dados",
-        image: "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
-        category: "Banco de Dados",
-        accessed: "Há 2 horas",
-    },
-    {
-        id: 2,
-        title: "Material de Programação",
-        image: "https://images.unsplash.com/photo-1499750310107-5fef28a66643",
-        category: "Programação",
-        accessed: "Ontem",
-    },
-    {
-        id: 3,
-        title: "Resumo de Engenharia de Software",
-        image: "https://images.unsplash.com/photo-1456324504439-367cee3b3c32",
-        category: "Engenharia de Software",
-        accessed: "Há 2 dias",
-    },
+// Materiais não têm imagem na API: capas decorativas fixas
+const CAPAS = [
+    "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
+    "https://images.unsplash.com/photo-1499750310107-5fef28a66643",
+    "https://images.unsplash.com/photo-1456324504439-367cee3b3c32",
 ];
 
-const novosMateriais = [
-    {
-        id: 1,
-        author: "Ana da Silva",
-        course: "Publicidade 2º período",
-        title: "Resumos de Direito Penal",
-        description:
-            "CF/88, conceitos e princípios fundamentais do Direito Penal, aplicação da lei penal no tempo e no espaço...",
-        type: "PDF",
-        pages: "12 páginas",
-        time: "Há 10 min",
-    },
-    {
-        id: 2,
-        author: "Ana da Silva",
-        course: "Publicidade 2º período",
-        title: "Resumo de Banco de Dados",
-        description:
-            "Conceitos fundamentais de banco de dados, modelos relacionais, entidades, atributos e relacionamentos...",
-        type: "PDF",
-        pages: "18 páginas",
-        time: "Há 25 min",
-    },
-    {
-        id: 3,
-        author: "Ana da Silva",
-        course: "Publicidade 2º período",
-        title: "Introdução à Programação",
-        description:
-            "Variáveis, estruturas condicionais, funções, vetores e os principais conceitos utilizados na programação...",
-        type: "PDF",
-        pages: "15 páginas",
-        time: "Há 40 min",
-    },
-    {
-        id: 4,
-        author: "Ana da Silva",
-        course: "Publicidade 2º período",
-        title: "Resumo de Engenharia",
-        description:
-            "Principais conceitos de engenharia de software, levantamento de requisitos, processos e desenvolvimento...",
-        type: "PDF",
-        pages: "21 páginas",
-        time: "Há 1 hora",
-    },
-];
+function formatDate(date: string) {
+    return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(date));
+}
 
 export default function HomePage() {
+    const [meusMateriais, setMeusMateriais] = useState<Material[]>([]);
+    const [recentes, setRecentes] = useState<Material[]>([]);
+    const [nome, setNome] = useState("");
+
+    useEffect(() => {
+        getMe().then((me) => setNome(me.firstName)).catch(() => setNome(""));
+        listMyMaterials(3).then((page) => setMeusMateriais(page.content)).catch(() => setMeusMateriais([]));
+        listMaterials(8)
+            .then((page) => setRecentes(page.content.filter((material) => material.isActive).slice(0, 4)))
+            .catch(() => setRecentes([]));
+    }, []);
+
+    const materiaisAcessados = meusMateriais.map((material, index) => ({
+        id: material.id,
+        title: material.title,
+        image: CAPAS[index % CAPAS.length],
+        category: material.subject,
+        accessed: formatDate(material.createdAt),
+    }));
+
+    const novosMateriais = recentes.map((material) => ({
+        id: material.id,
+        author: material.createdBy,
+        course: material.course,
+        title: material.title,
+        description: material.body,
+        type: material.subject,
+        pages: "",
+        time: formatDate(material.createdAt),
+    }));
+
     return (
         <div className="min-h-screen bg-[#f8f7fc]">
 
@@ -144,7 +118,7 @@ export default function HomePage() {
                                         text-purple-600
                                     "
                                 >
-                                    Bom dia, Gilberto 
+                                    Olá{nome && `, ${nome}`} 
                                 </p>
 
                                 <h1
@@ -446,7 +420,7 @@ export default function HomePage() {
                                 </h2>
 
                                 <p className="mt-1 text-xs text-gray-500">
-                                    Seus materiais acessados recentemente
+                                    Seus materiais publicados recentemente
                                 </p>
 
                             </div>
@@ -603,7 +577,7 @@ export default function HomePage() {
                                                     <Clock3 size={12} />
 
                                                     <span>
-                                                        Acessado {material.accessed}
+                                                        Publicado em {material.accessed}
                                                     </span>
                                                 </div>
 

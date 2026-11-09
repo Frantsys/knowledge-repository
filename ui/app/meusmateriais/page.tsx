@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Clock3,
@@ -15,104 +15,53 @@ import {
 } from "lucide-react";
 
 import Navbar from "@/components/navbar";
+import { listMyMaterials, setMaterialActive } from "@/lib/api/materials";
+import { downloadFile, listFiles } from "@/lib/api/files";
 
 type Material = {
   id: number;
   titulo: string;
   categoria: string;
-  paginas: number;
+  curso: string;
   tempo: string;
   imagem: string;
 };
 
-const materiaisIniciais: Material[] = [
-  {
-    id: 1,
-    titulo: "Resumo de Direito Penal",
-    categoria: "Direito",
-    paginas: 12,
-    tempo: "2 dias atrás",
-    imagem:
-      "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: 2,
-    titulo: "Resumo de Banco de Dados",
-    categoria: "Tecnologia",
-    paginas: 18,
-    tempo: "4 dias atrás",
-    imagem:
-      "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: 3,
-    titulo: "Introdução à Programação",
-    categoria: "Programação",
-    paginas: 25,
-    tempo: "1 semana atrás",
-    imagem:
-      "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: 4,
-    titulo: "Engenharia de Software",
-    categoria: "Tecnologia",
-    paginas: 20,
-    tempo: "1 semana atrás",
-    imagem:
-      "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: 5,
-    titulo: "Modelagem de Banco de Dados",
-    categoria: "Banco de Dados",
-    paginas: 15,
-    tempo: "2 semanas atrás",
-    imagem:
-      "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: 6,
-    titulo: "Lógica de Programação",
-    categoria: "Programação",
-    paginas: 10,
-    tempo: "2 semanas atrás",
-    imagem:
-      "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: 7,
-    titulo: "Redes de Computadores",
-    categoria: "Redes",
-    paginas: 22,
-    tempo: "3 semanas atrás",
-    imagem:
-      "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: 8,
-    titulo: "Sistemas Operacionais",
-    categoria: "Computação",
-    paginas: 16,
-    tempo: "1 mês atrás",
-    imagem:
-      "https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: 9,
-    titulo: "Estrutura de Dados",
-    categoria: "Programação",
-    paginas: 30,
-    tempo: "1 mês atrás",
-    imagem:
-      "https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&w=900&q=80",
-  },
+// Materiais não têm imagem na API: capas decorativas fixas
+const CAPAS = [
+  "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&w=900&q=80",
 ];
+
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(date));
+}
 
 export default function MeusMateriaisPage() {
   const router = useRouter();
 
-  const [materiais, setMateriais] = useState<Material[]>(materiaisIniciais);
+  const [materiais, setMateriais] = useState<Material[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listMyMaterials()
+      .then((page) =>
+        setMateriais(
+          page.content.map((material, index) => ({
+            id: material.id,
+            titulo: material.title,
+            categoria: material.subject,
+            curso: material.course,
+            tempo: formatDate(material.createdAt),
+            imagem: CAPAS[index % CAPAS.length],
+          }))
+        )
+      )
+      .catch((error: Error) => setLoadError(error.message))
+      .finally(() => setLoading(false));
+  }, []);
   const [menuAberto, setMenuAberto] = useState<number | null>(null);
   const [modalAberto, setModalAberto] = useState<number | null>(null);
 
@@ -148,15 +97,24 @@ export default function MeusMateriaisPage() {
     router.push(`/materiais/${materialSelecionado.id}/editar`);
   }
 
-  function baixarMaterial() {
+  async function baixarMaterial() {
     if (!materialSelecionado) return;
 
-    alert(
-      `Showcase: download de "${materialSelecionado.titulo}" seria iniciado aqui.`
-    );
+    try {
+      const files = await listFiles(materialSelecionado.id);
+
+      if (files.content.length === 0) {
+        alert("Este material não tem arquivo anexado.");
+        return;
+      }
+
+      await downloadFile(files.content[0]);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Não foi possível baixar o arquivo.");
+    }
   }
 
-  function excluirMaterial() {
+  async function excluirMaterial() {
     if (!materialSelecionado) return;
 
     const confirmar = window.confirm(
@@ -164,6 +122,16 @@ export default function MeusMateriaisPage() {
     );
 
     if (!confirmar) return;
+
+    // Exclusão lógica: a API só desativa o material
+    try {
+      await setMaterialActive(materialSelecionado.id, false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Não foi possível excluir o material.");
+      return;
+    }
+
+    document.body.style.overflow = "";
 
     setMateriais((atual) =>
       atual.filter((material) => material.id !== materialSelecionado.id)
@@ -206,7 +174,14 @@ export default function MeusMateriaisPage() {
         </div>
 
         {/* Estado vazio */}
-        {materiais.length === 0 ? (
+        {loading || loadError ? (
+          <p
+            role={loadError ? "alert" : "status"}
+            className={`py-16 text-center text-sm ${loadError ? "text-red-600" : "text-gray-500"}`}
+          >
+            {loadError ?? "Carregando seus materiais..."}
+          </p>
+        ) : materiais.length === 0 ? (
           <div className="flex min-h-[420px] flex-col items-center justify-center rounded-2xl border border-dashed border-purple-200 bg-white px-6 text-center shadow-sm">
             <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-100">
               <Folder className="h-8 w-8 text-purple-600" />
@@ -282,8 +257,7 @@ export default function MeusMateriaisPage() {
                     <div className="flex items-center gap-1.5 text-xs text-[#6875a0]">
                       <FileText className="h-4 w-4" />
                       <span>
-                        {material.paginas}{" "}
-                        {material.paginas === 1 ? "página" : "páginas"}
+                        {material.curso}
                       </span>
                     </div>
 

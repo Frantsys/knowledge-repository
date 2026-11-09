@@ -1,5 +1,6 @@
 "use client";
 
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 
 import {
@@ -13,177 +14,17 @@ import {
 } from "lucide-react";
 
 import Navbar from "@/components/navbar";
+import { getMaterial, type Material } from "@/lib/api/materials";
+import { downloadFile, listFiles, type MaterialFile } from "@/lib/api/files";
+import { createComment, listComments, type Comment } from "@/lib/api/comments";
+import { getMe } from "@/lib/api/perfil";
 
-const materiais = [
-    {
-        id: 1,
-        titulo: "Resumo de Direito Penal",
-        categoria: "Direito",
-        paginas: "12 páginas",
-        tempo: "2 dias atrás",
-        autor: "Gilberto",
-        imagem:
-            "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=900&q=80",
-        descricao:
-            "Resumo dos principais conceitos e fundamentos do Direito Penal.",
-        conteudo: [
-            {
-                titulo: "1. Introdução ao Direito Penal",
-                paragrafos: [
-                    "O Direito Penal é o ramo do Direito responsável por definir quais condutas são consideradas crimes e quais sanções podem ser aplicadas a quem pratica essas condutas.",
-                    "Seu principal objetivo é proteger os bens jurídicos considerados fundamentais para a sociedade, estabelecendo limites para o comportamento dos indivíduos."
-                ],
-            },
-            {
-                titulo: "2. Princípios do Direito Penal",
-                paragrafos: [
-                    "Os princípios do Direito Penal estabelecem regras fundamentais que devem ser observadas na criação, interpretação e aplicação das normas penais.",
-                    "Entre os principais princípios estão o princípio da legalidade, da anterioridade, da humanidade das penas e da individualização da pena."
-                ],
-            },
-            {
-                titulo: "3. Princípio da Legalidade",
-                paragrafos: [
-                    "O princípio da legalidade estabelece que não existe crime sem uma lei anterior que o defina, assim como não existe pena sem prévia previsão legal.",
-                    "Esse princípio busca impedir que uma pessoa seja punida por uma conduta que não era considerada crime no momento em que foi praticada."
-                ],
-            },
-            {
-                titulo: "4. Aplicação da Lei Penal",
-                paragrafos: [
-                    "A aplicação da lei penal envolve a análise de quando e onde determinada norma pode ser aplicada.",
-                    "Como regra geral, considera-se o momento da prática da conduta para determinar a aplicação da lei penal."
-                ],
-            },
-            {
-                titulo: "5. Conclusão",
-                paragrafos: [
-                    "O Direito Penal possui papel fundamental na organização da sociedade, estabelecendo limites para determinadas condutas e protegendo bens jurídicos relevantes.",
-                    "O conhecimento de seus princípios é essencial para compreender como as normas penais são criadas e aplicadas."
-                ],
-            },
-        ],
-    },
+// Materiais não têm imagem na API: capa decorativa fixa
+const CAPA = "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=900&q=80";
 
-    {
-        id: 2,
-        titulo: "Resumo de Banco de Dados",
-        categoria: "Tecnologia",
-        paginas: "18 páginas",
-        tempo: "4 dias atrás",
-        autor: "Gilberto",
-        imagem:
-            "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=900&q=80",
-        descricao:
-            "Resumo sobre conceitos fundamentais de banco de dados e modelo relacional.",
-        conteudo: [
-            {
-                titulo: "1. Introdução a Banco de Dados",
-                paragrafos: [
-                    "Um banco de dados é uma coleção organizada de informações que pode ser armazenada, consultada e modificada por sistemas computacionais.",
-                    "Os bancos de dados são utilizados em praticamente todos os sistemas modernos que precisam armazenar informações."
-                ],
-            },
-            {
-                titulo: "2. Modelo Relacional",
-                paragrafos: [
-                    "O modelo relacional organiza os dados em tabelas compostas por linhas e colunas.",
-                    "Cada tabela representa uma entidade ou conjunto de informações relacionadas."
-                ],
-            },
-            {
-                titulo: "3. Tabelas e Registros",
-                paragrafos: [
-                    "As tabelas armazenam os dados de uma determinada entidade.",
-                    "Cada linha representa um registro e cada coluna representa um atributo desse registro."
-                ],
-            },
-            {
-                titulo: "4. Chaves",
-                paragrafos: [
-                    "As chaves são utilizadas para identificar registros e estabelecer relacionamentos entre tabelas.",
-                    "A chave primária identifica unicamente cada registro de uma tabela."
-                ],
-            },
-        ],
-    },
-
-    {
-        id: 3,
-        titulo: "Introdução à Programação",
-        categoria: "Programação",
-        paginas: "25 páginas",
-        tempo: "1 semana atrás",
-        autor: "Gilberto",
-        imagem:
-            "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=900&q=80",
-        descricao:
-            "Material introdutório sobre lógica e conceitos fundamentais de programação.",
-        conteudo: [
-            {
-                titulo: "1. O que é programação?",
-                paragrafos: [
-                    "Programação é o processo de criação de instruções que podem ser executadas por um computador.",
-                    "Essas instruções são escritas utilizando linguagens de programação."
-                ],
-            },
-            {
-                titulo: "2. Variáveis",
-                paragrafos: [
-                    "Variáveis são utilizadas para armazenar valores que podem ser utilizados durante a execução de um programa.",
-                    "Uma variável pode armazenar diferentes tipos de dados, como números, textos e valores booleanos."
-                ],
-            },
-            {
-                titulo: "3. Estruturas Condicionais",
-                paragrafos: [
-                    "Estruturas condicionais permitem que um programa tome decisões de acordo com determinadas condições.",
-                    "O exemplo mais comum é a estrutura if/else."
-                ],
-            },
-            {
-                titulo: "4. Funções",
-                paragrafos: [
-                    "Funções permitem organizar o código em blocos reutilizáveis.",
-                    "Elas podem receber dados como parâmetros e retornar resultados."
-                ],
-            },
-        ],
-    },
-
-    {
-        id: 4,
-        titulo: "Engenharia de Software",
-        categoria: "Tecnologia",
-        paginas: "20 páginas",
-        tempo: "1 semana atrás",
-        autor: "Gilberto",
-        imagem:
-            "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=900&q=80",
-        descricao:
-            "Principais conceitos relacionados à engenharia de software.",
-        conteudo: [
-            {
-                titulo: "1. Introdução",
-                paragrafos: [
-                    "A Engenharia de Software reúne métodos, técnicas e práticas utilizadas para desenvolver e manter sistemas de software.",
-                ],
-            },
-            {
-                titulo: "2. Levantamento de Requisitos",
-                paragrafos: [
-                    "O levantamento de requisitos busca identificar as necessidades dos usuários e as funcionalidades que o sistema deverá possuir.",
-                ],
-            },
-            {
-                titulo: "3. Desenvolvimento",
-                paragrafos: [
-                    "O desenvolvimento transforma os requisitos definidos anteriormente em uma solução de software funcional.",
-                ],
-            },
-        ],
-    },
-];
+function formatDate(date: string) {
+    return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(date));
+}
 
 export default function MaterialPage() {
     const router = useRouter();
@@ -191,9 +32,67 @@ export default function MaterialPage() {
 
     const id = Number(params.id);
 
-    const material = materiais.find(
-        (material) => material.id === id
-    );
+    const [data, setData] = useState<Material | null>(null);
+    const [files, setFiles] = useState<MaterialFile[]>([]);
+    const [comments, setComments] = useState<Comment[]>([]);
+    const [myId, setMyId] = useState<number | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [newComment, setNewComment] = useState("");
+    const [commentError, setCommentError] = useState<string | null>(null);
+
+    useEffect(() => {
+        Promise.all([
+            getMaterial(id).then(setData),
+            listFiles(id).then((page) => setFiles(page.content)),
+            listComments(id).then((page) => setComments(page.content)),
+            getMe().then((me) => setMyId(me.id)),
+        ])
+            .catch(() => undefined)
+            .finally(() => setLoading(false));
+    }, [id]);
+
+    async function handleComment(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setCommentError(null);
+
+        try {
+            const comment = await createComment(id, newComment.trim());
+            setComments((current) => [comment, ...current]);
+            setNewComment("");
+        } catch (error) {
+            setCommentError(error instanceof Error ? error.message : "Não foi possível comentar.");
+        }
+    }
+
+    // Adapta o MaterialResponse ao formato que o layout já usa
+    const material = data && data.isActive
+        ? {
+              id: data.id,
+              titulo: data.title,
+              categoria: data.subject,
+              paginas: `${files.length} ${files.length === 1 ? "arquivo" : "arquivos"}`,
+              tempo: formatDate(data.createdAt),
+              autor: data.createdBy,
+              imagem: CAPA,
+              descricao: data.course,
+              conteudo: [{ titulo: "Conteúdo", paragrafos: data.body.split(/\n+/).filter(Boolean) }],
+          }
+        : null;
+
+    const isOwner = data !== null && myId !== null && data.userId === myId;
+
+    if (loading) {
+        return (
+            <>
+                <Navbar />
+                <main className="min-h-screen bg-[#faf9ff]">
+                    <p role="status" className="py-24 text-center text-sm text-gray-500">
+                        Carregando material...
+                    </p>
+                </main>
+            </>
+        );
+    }
 
     if (!material) {
         return (
@@ -447,11 +346,16 @@ export default function MaterialPage() {
                             <div className="flex items-center gap-2">
 
                                 <button
+                                    type="button"
+                                    disabled={files.length === 0}
+                                    onClick={() => downloadFile(files[0]).catch((error: Error) => alert(error.message))}
                                     className="
                                         flex
                                         items-center
                                         gap-2
                                         rounded-xl
+                                        disabled:cursor-not-allowed
+                                        disabled:opacity-50
                                         border
                                         border-purple-100
                                         px-4
@@ -468,6 +372,7 @@ export default function MaterialPage() {
                                     Baixar
                                 </button>
 
+                                {isOwner && (
                                 <button
                                     onClick={() => router.push(`/materiais/${material.id}/editar`)}
                                     className="
@@ -489,6 +394,7 @@ export default function MaterialPage() {
 
                                     Editar
                                 </button>
+                                )}
 
                             </div>
 
@@ -593,6 +499,55 @@ export default function MaterialPage() {
 
                             </div>
 
+                            {/* Comentários */}
+
+                            <section className="mt-10 border-t border-gray-100 pt-8">
+                                <h2 className="text-lg font-bold text-[#171052]">
+                                    Comentários ({comments.length})
+                                </h2>
+
+                                <form onSubmit={handleComment} className="mt-4">
+                                    <label htmlFor="new-comment" className="sr-only">
+                                        Escreva um comentário
+                                    </label>
+                                    <textarea
+                                        id="new-comment"
+                                        rows={3}
+                                        value={newComment}
+                                        onChange={(event) => setNewComment(event.target.value)}
+                                        placeholder="Escreva um comentário..."
+                                        className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10"
+                                    />
+                                    {commentError && (
+                                        <p role="alert" className="mt-2 whitespace-pre-line text-xs text-red-600">
+                                            {commentError}
+                                        </p>
+                                    )}
+                                    <button
+                                        type="submit"
+                                        disabled={!newComment.trim()}
+                                        className="mt-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        Comentar
+                                    </button>
+                                </form>
+
+                                <ul className="mt-6 space-y-4">
+                                    {comments.map((comment) => (
+                                        <li key={comment.id} className="rounded-xl border border-gray-100 bg-white p-4">
+                                            <p className="text-xs text-[#8992b2]">
+                                                <span className="font-semibold text-[#303657]">{comment.createdBy}</span>
+                                                {" · "}
+                                                {formatDate(comment.createdAt)}
+                                            </p>
+                                            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#59638f]">
+                                                {comment.body}
+                                            </p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </section>
+
                         </article>
 
 
@@ -695,35 +650,40 @@ export default function MaterialPage() {
                                         text-[#171052]
                                     "
                                 >
-                                    Conteúdo
+                                    Arquivos
                                 </h3>
 
                                 <div className="mt-4 space-y-2">
 
-                                    {material.conteudo.map(
-                                        (secao, index) => (
-
-                                            <button
-                                                key={index}
-                                                className="
-                                                    block
-                                                    w-full
-                                                    rounded-lg
-                                                    px-3
-                                                    py-2
-                                                    text-left
-                                                    text-xs
-                                                    text-[#6875a0]
-                                                    transition
-                                                    hover:bg-purple-50
-                                                    hover:text-purple-700
-                                                "
-                                            >
-                                                {secao.titulo}
-                                            </button>
-
-                                        )
+                                    {files.length === 0 && (
+                                        <p className="px-3 text-xs text-[#8992b2]">Nenhum arquivo anexado.</p>
                                     )}
+
+                                    {files.map((file) => (
+                                        <button
+                                            key={file.id}
+                                            type="button"
+                                            onClick={() => downloadFile(file).catch((error: Error) => alert(error.message))}
+                                            className="
+                                                flex
+                                                w-full
+                                                items-center
+                                                gap-2
+                                                rounded-lg
+                                                px-3
+                                                py-2
+                                                text-left
+                                                text-xs
+                                                text-[#6875a0]
+                                                transition
+                                                hover:bg-purple-50
+                                                hover:text-purple-700
+                                            "
+                                        >
+                                            <Download size={13} className="shrink-0" />
+                                            <span className="truncate">{file.name}</span>
+                                        </button>
+                                    ))}
 
                                 </div>
 
