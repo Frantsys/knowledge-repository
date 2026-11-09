@@ -57,6 +57,14 @@ public class FileService {
     }
 
     @Transactional(readOnly = true)
+    public Page<FileResponse> findAllByMaterialId(Long materialId, Pageable pageable) {
+
+        return fileRepository.findByMaterialIdAndIsActiveTrue(materialId, pageable)
+                .map(fileMapper::toResponse);
+
+    }
+
+    @Transactional(readOnly = true)
     public Page<FileSummaryResponse> findAllSummary(Pageable pageable) {
 
         return fileRepository.findAll(pageable)

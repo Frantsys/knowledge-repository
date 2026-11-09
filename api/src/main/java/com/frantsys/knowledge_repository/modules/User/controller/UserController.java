@@ -69,6 +69,14 @@ public class UserController {
 
     }
 
+    @Operation(summary = "Busca o usuário autenticado")
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> findMe(Authentication authentication) {
+
+        return ResponseEntity.ok(userService.findByEmail(authentication.getName()));
+
+    }
+
     @Operation(summary = "Busca um usuário pelo ID")
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> findById(@PathVariable Long id) {

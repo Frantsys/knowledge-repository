@@ -46,6 +46,14 @@ public class MaterialController {
 
     }
 
+    @Operation(summary = "Lista os materiais ativos do usuário autenticado (paginado)")
+    @GetMapping("/me")
+    public ResponseEntity<Page<MaterialResponse>> findMine(Authentication authentication, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        return ResponseEntity.ok(materialService.findAllByUserEmail(authentication.getName(), pageable));
+
+    }
+
     @Operation(summary = "Lista resumo dos materiais (paginado)")
     @GetMapping("/summary")
     public ResponseEntity<Page<MaterialSummaryResponse>> findAllSummary(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {

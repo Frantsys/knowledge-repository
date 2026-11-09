@@ -1,5 +1,6 @@
 package com.frantsys.knowledge_repository.modules.Comment.service;
 
+import static org.mockito.ArgumentMatchers.eq;
 import com.frantsys.knowledge_repository.exception.ResourceNotFoundException;
 import com.frantsys.knowledge_repository.modules.Comment.dto.request.CommentCreateRequest;
 import com.frantsys.knowledge_repository.modules.Comment.dto.request.CommentReplyCreateRequest;
@@ -226,4 +227,17 @@ class CommentServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> commentService.findById(99L));
     }
 
+    @Test
+    @DisplayName("findAllByMaterialId should return the material's active comments")
+    void findAllByMaterialId_shouldReturnMappedComments() {
+        Comment comment = new Comment();
+        CommentResponse response = new CommentResponse();
+        when(commentRepository.findByMaterialIdAndIsActiveTrue(eq(5L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(comment)));
+        when(commentMapper.toResponse(comment)).thenReturn(response);
+
+        Page<CommentResponse> result = commentService.findAllByMaterialId(5L, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).containsExactly(response);
+    }
 }

@@ -50,9 +50,12 @@ public class FileController {
 
     @Operation(summary = "Lista arquivos (paginado)")
     @GetMapping
-    public ResponseEntity<Page<FileResponse>> findAll(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+    public ResponseEntity<Page<FileResponse>> findAll(@RequestParam(required = false) Long materialId, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        Page<FileResponse> files = fileService.findAll(pageable);
+        // Com materialId: só os ativos daquele material (usado pela página do material)
+        Page<FileResponse> files = materialId == null
+                ? fileService.findAll(pageable)
+                : fileService.findAllByMaterialId(materialId, pageable);
 
         return ResponseEntity.ok(files);
 

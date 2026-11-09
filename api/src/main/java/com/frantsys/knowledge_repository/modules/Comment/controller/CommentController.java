@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Comment", description = "Caminho da API para gerenciar comentários")
@@ -38,9 +39,12 @@ public class CommentController {
 
     @Operation(summary = "Lista comentários (paginado)")
     @GetMapping
-    public ResponseEntity<Page<CommentResponse>> findAll(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+    public ResponseEntity<Page<CommentResponse>> findAll(@RequestParam(required = false) Long materialId, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        Page<CommentResponse> comments = commentService.findAll(pageable);
+        // Com materialId: só os ativos daquele material (usado pela página do material)
+        Page<CommentResponse> comments = materialId == null
+                ? commentService.findAll(pageable)
+                : commentService.findAllByMaterialId(materialId, pageable);
 
         return ResponseEntity.ok(comments);
 

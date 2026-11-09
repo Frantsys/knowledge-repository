@@ -1,5 +1,6 @@
 package com.frantsys.knowledge_repository.modules.Material.service;
 
+import static org.mockito.ArgumentMatchers.eq;
 import com.frantsys.knowledge_repository.exception.ResourceNotFoundException;
 import com.frantsys.knowledge_repository.modules.Material.dto.request.MaterialCreateRequest;
 import com.frantsys.knowledge_repository.modules.Material.dto.request.MaterialUpdateActivationRequest;
@@ -187,4 +188,16 @@ class MaterialServiceTest {
         verify(materialRepository).save(existingMaterial);
     }
 
+    @Test
+    @DisplayName("findAllByUserEmail should return the user's active materials")
+    void findAllByUserEmail_shouldReturnMappedMaterials() {
+        MaterialResponse response = new MaterialResponse();
+        when(materialRepository.findByUserEmailAndIsActiveTrue(eq("anna@example.com"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(existingMaterial)));
+        when(materialMapper.toResponse(existingMaterial)).thenReturn(response);
+
+        Page<MaterialResponse> result = materialService.findAllByUserEmail("anna@example.com", PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).containsExactly(response);
+    }
 }

@@ -149,4 +149,17 @@ class MaterialControllerTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    @DisplayName("GET /materials/me lists the authenticated user's materials")
+    void listMine_usesTokenSubject() throws Exception {
+        MaterialResponse response = new MaterialResponse();
+        response.setTitle("Mine");
+
+        when(materialService.findAllByUserEmail(org.mockito.ArgumentMatchers.eq("anna@example.com"), any()))
+                .thenReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
+
+        mockMvc.perform(get("/v1/api/materials/me").with(jwt().jwt(j -> j.subject("anna@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].title").value("Mine"));
+    }
 }

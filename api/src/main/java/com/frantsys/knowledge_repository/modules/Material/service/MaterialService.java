@@ -37,6 +37,14 @@ public class MaterialService {
     }
 
     @Transactional(readOnly = true)
+    public Page<MaterialResponse> findAllByUserEmail(String email, Pageable pageable) {
+
+        return materialRepository.findByUserEmailAndIsActiveTrue(email, pageable)
+                .map(materialMapper::toResponse);
+
+    }
+
+    @Transactional(readOnly = true)
     public Page<MaterialSummaryResponse> findAllSummary(Pageable pageable) {
 
         return materialRepository.findAll(pageable)

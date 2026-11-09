@@ -259,4 +259,21 @@ class UserServiceTest {
                 () -> userService.loadUserByUsername("missing@example.com"));
     }
 
+    @Test
+    @DisplayName("findByEmail should return the mapped user")
+    void findByEmail_shouldReturnUser() {
+        UserResponse response = newUserResponse();
+        when(userRepository.findByEmail("student@example.com")).thenReturn(Optional.of(user));
+        when(userMapper.toResponse(user)).thenReturn(response);
+
+        assertThat(userService.findByEmail("student@example.com")).isSameAs(response);
+    }
+
+    @Test
+    @DisplayName("findByEmail should throw when the user does not exist")
+    void findByEmail_shouldThrowWhenNotFound() {
+        when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> userService.findByEmail("missing@example.com"));
+    }
 }

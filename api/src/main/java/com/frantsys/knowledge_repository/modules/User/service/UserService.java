@@ -137,6 +137,16 @@ public class UserService implements UserDetailsService {
 
     }
 
+    @Transactional(readOnly = true)
+    public UserResponse findByEmail(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com e-mail: " + email));
+
+        return userMapper.toResponse(user);
+
+    }
+
     @Transactional
     public void updatePassword(String email, UserUpdatePasswordRequest request) {
 

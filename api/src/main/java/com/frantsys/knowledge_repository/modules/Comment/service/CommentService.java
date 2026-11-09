@@ -40,6 +40,14 @@ public class CommentService {
     }
 
     @Transactional(readOnly = true)
+    public Page<CommentResponse> findAllByMaterialId(Long materialId, Pageable pageable) {
+
+        return commentRepository.findByMaterialIdAndIsActiveTrue(materialId, pageable)
+                .map(commentMapper::toResponse);
+
+    }
+
+    @Transactional(readOnly = true)
     public Page<CommentSummaryResponse> findAllSummary(Pageable pageable) {
 
         return commentRepository.findAll(pageable)

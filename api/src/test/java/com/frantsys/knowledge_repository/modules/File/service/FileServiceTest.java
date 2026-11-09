@@ -1,5 +1,6 @@
 package com.frantsys.knowledge_repository.modules.File.service;
 
+import static org.mockito.ArgumentMatchers.eq;
 import com.frantsys.knowledge_repository.exception.BusinessException;
 import com.frantsys.knowledge_repository.exception.ResourceNotFoundException;
 import com.frantsys.knowledge_repository.modules.File.storage.StorageService;
@@ -252,4 +253,16 @@ class FileServiceTest {
         verify(fileRepository).save(existingFile);
     }
 
+    @Test
+    @DisplayName("findAllByMaterialId should return the material's active files")
+    void findAllByMaterialId_shouldReturnMappedFiles() {
+        FileResponse response = new FileResponse();
+        when(fileRepository.findByMaterialIdAndIsActiveTrue(eq(5L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(existingFile)));
+        when(fileMapper.toResponse(existingFile)).thenReturn(response);
+
+        Page<FileResponse> result = fileService.findAllByMaterialId(5L, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).containsExactly(response);
+    }
 }
