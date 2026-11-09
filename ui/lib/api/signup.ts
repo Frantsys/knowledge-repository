@@ -1,17 +1,23 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+import { apiFetch } from "./client";
+import type { Address, UserProfile } from "./perfil";
 
-export async function createUser(data: unknown) {
-  const response = await fetch(`${API_URL}/v1/api/auth/register`, {
+// Espelha o UserRegisterRequest da API
+export interface RegisterData {
+  cpf: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  phoneNumber: string;
+  gender: string;
+  course: string;
+  birthDate: string;
+  address: Address;
+}
+
+export function createUser(data: RegisterData): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/v1/api/auth/register", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(data),
   });
-
-  if (!response.ok) {
-    throw new Error("Erro ao criar usuário");
-  }
-
-  return response.json();
 }
