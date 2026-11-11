@@ -4,13 +4,14 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { login } from "@/lib/api/login";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
-
     const [error, setError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -295,33 +296,56 @@ export default function LoginPage() {
                                     Senha
                                 </label>
 
-                                <input
-                                    id="password"
-                                    type="password"
-                                    value={password}
-                                    onChange={(event) =>
-                                        setPassword(event.target.value)
-                                    }
-                                    placeholder="••••••••"
-                                    required
-                                    autoComplete="current-password"
-                                    className="
-                                        h-10
-                                        w-full
-                                        rounded-md
-                                        border
-                                        border-gray-300
-                                        bg-white
-                                        px-3
-                                        text-xs
-                                        text-gray-900
-                                        outline-none
-                                        transition
-                                        focus:border-purple-600
-                                        focus:ring-1
-                                        focus:ring-purple-600
-                                    "
-                                />
+                                <div className="relative">
+                                    <input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={(event) =>
+                                            setPassword(event.target.value)
+                                        }
+                                        placeholder="••••••••"
+                                        required
+                                        autoComplete="current-password"
+                                        className="
+                                            h-10
+                                            w-full
+                                            rounded-md
+                                            border
+                                            border-gray-300
+                                            bg-white
+                                            px-3
+                                            pr-10
+                                            text-xs
+                                            text-gray-900
+                                            outline-none
+                                            transition
+                                            focus:border-purple-600
+                                            focus:ring-1
+                                            focus:ring-purple-600
+                                        "
+                                    />
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="
+                                            absolute
+                                            right-3
+                                            top-1/2
+                                            -translate-y-1/2
+                                            text-gray-500
+                                            hover:text-purple-600
+                                        "
+                                        aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff size={17} />
+                                        ) : (
+                                            <Eye size={17} />
+                                        )}
+                                    </button>
+                                </div>
 
                                 {/* Esqueci minha senha */}
                                 {/*<div className="mt-1">
