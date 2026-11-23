@@ -13,6 +13,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
+import java.net.URI;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -74,6 +75,32 @@ class SupabaseStorageServiceTest {
                         .body("{\"statusCode\":\"404\",\"error\":\"not_found\",\"message\":\"Object not found\"}"));
 
         assertThrows(ResourceNotFoundException.class, () -> storage.load("missing"));
+    }
+
+    @Test
+    @DisplayName("signedDownloadUrl should return an absolute signed URL that forces download with the file name")
+    void signedDownloadUrl_returnsAbsoluteUrl() {
+        server.expect(requestTo("https://proj.supabase.co/storage/v1/object/sign/files/abc"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header("Authorization", "Bearer secret-key"))
+                .andExpect(content().json("{\"expiresIn\":60}"))
+                .andRespond(withSuccess("{\"signedURL\":\"/object/sign/files/abc?token=t0k\"}", MediaType.APPLICATION_JSON));
+
+        URI url = storage.signedDownloadUrl("abc", "minha apostila.pdf").orElseThrow();
+
+        assertThat(url.toString())
+                .isEqualTo("https://proj.supabase.co/storage/v1/object/sign/files/abc?token=t0k&download=minha%20apostila.pdf");
+    }
+
+    @Test
+    @DisplayName("signedDownloadUrl should map a missing object to ResourceNotFoundException")
+    void signedDownloadUrl_missingObject_throwsNotFound() {
+        server.expect(requestTo("https://proj.supabase.co/storage/v1/object/sign/files/missing"))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"statusCode\":\"404\",\"error\":\"not_found\",\"message\":\"Object not found\"}"));
+
+        assertThrows(ResourceNotFoundException.class, () -> storage.signedDownloadUrl("missing", "a.pdf"));
     }
 
     @Test

@@ -1,0 +1,76 @@
+databaseChangeLog:
+  # O Postgres não cria índice para chave estrangeira: sem eles, listagens por material/autor e checagens de posse varrem a tabela
+  - changeSet:
+      id: 006-fk-and-listing-indexes
+      author: francis
+      changes:
+        - createIndex:
+            tableName: materials
+            indexName: idx_materials_user_id
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: materials
+            indexName: idx_materials_created_at
+            columns:
+              - column:
+                  name: created_at
+        - createIndex:
+            tableName: comments
+            indexName: idx_comments_material_id_created_at
+            columns:
+              - column:
+                  name: material_id
+              - column:
+                  name: created_at
+        - createIndex:
+            tableName: comments
+            indexName: idx_comments_parent_id
+            columns:
+              - column:
+                  name: parent_id
+        - createIndex:
+            tableName: comments
+            indexName: idx_comments_user_id
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: files
+            indexName: idx_files_material_id_created_at
+            columns:
+              - column:
+                  name: material_id
+              - column:
+                  name: created_at
+
+  # CPF único: acelera o existsByCpf do cadastro e fecha a corrida entre duas inscrições simultâneas.
+  # Se já houver CPF duplicado no banco, o changeSet é pulado (e tentado de novo no próximo start) em vez de derrubar o deploy.
+  - changeSet:
+      id: 006-users-cpf-unique
+      author: francis
+      preConditions:
+        - onFail: CONTINUE
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM (SELECT cpf FROM users GROUP BY cpf HAVING count(*) > 1) duplicated
+      changes:
+        - createIndex:
+            tableName: users
+            indexName: uq_users_cpf
+            unique: true
+            columns:
+              - column:
+                  name: cpf
+
+  # Busca parcial por nome (UserSpec.byName: lower(first_name) || ' ' || lower(last_name) LIKE '%x%')
+  - changeSet:
+      id: 006-users-name-trigram
+      author: francis
+      dbms: postgresql
+      changes:
+        - sql:
+            sql: CREATE EXTENSION IF NOT EXISTS pg_trgm
+        - sql:
+            sql: CREATE INDEX idx_users_full_name_trgm ON users USING gin ((lower(first_name) || ' ' || lower(last_name)) gin_trgm_ops)

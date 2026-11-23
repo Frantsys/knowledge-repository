@@ -36,7 +36,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 @Tag(name = "File", description = "Caminho da API para gerenciar arquivos")
 @SecurityRequirement(name = "bearerAuth")
@@ -100,6 +102,12 @@ public class FileController {
     public ResponseEntity<Resource> download(@PathVariable Long id) {
 
         File file = fileService.findEntityById(id);
+
+        // Supabase: redireciona para uma URL assinada e o navegador baixa direto do bucket, sem os bytes passarem pela API
+        Optional<URI> signedUrl = storageService.signedDownloadUrl(file.getPathId(), file.getName());
+        if (signedUrl.isPresent()) {
+            return ResponseEntity.status(HttpStatus.FOUND).location(signedUrl.get()).build();
+        }
 
         Resource resource = storageService.load(file.getPathId());
 

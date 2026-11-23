@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -16,6 +17,11 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 // Guarda os arquivos num bucket privado do Supabase Storage via REST (usado em produção: disco do host é efêmero)
@@ -23,7 +29,11 @@ import java.util.UUID;
 @ConditionalOnProperty(name = "app.storage.type", havingValue = "supabase")
 public class SupabaseStorageService implements StorageService {
 
+    // Validade da URL assinada de download: só precisa durar o redirect
+    private static final int SIGNED_URL_EXPIRES_SECONDS = 60;
+
     private final RestClient client;
+    private final String storageUrl;
     private final String bucket;
 
     @Autowired
@@ -39,8 +49,9 @@ public class SupabaseStorageService implements StorageService {
             throw new IllegalStateException("SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios com STORAGE_TYPE=supabase");
         }
 
+        this.storageUrl = url.replaceAll("/+$", "") + "/storage/v1";
         this.client = builder
-                .baseUrl(url.replaceAll("/+$", "") + "/storage/v1/object")
+                .baseUrl(storageUrl + "/object")
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + serviceRoleKey)
                 .defaultHeader("apikey", serviceRoleKey)
                 .build();
@@ -60,7 +71,9 @@ public class SupabaseStorageService implements StorageService {
             client.post()
                     .uri("/{bucket}/{key}", bucket, key)
                     .contentType(MediaType.parseMediaType(contentType))
-                    .body(file.getBytes())
+                    .contentLength(file.getSize())
+                    // Envia em streaming em vez de copiar o arquivo inteiro para a memória com getBytes()
+                    .body(new InputStreamResource(file.getInputStream()))
                     .retrieve()
                     .toBodilessEntity();
 
@@ -97,6 +110,39 @@ public class SupabaseStorageService implements StorageService {
             throw new BusinessException("Não foi possível ler o arquivo");
         }
 
+    }
+
+    @Override
+    public Optional<URI> signedDownloadUrl(String key, String filename) {
+
+        try {
+            SignedUrlResponse response = client.post()
+                    .uri("/sign/{bucket}/{key}", bucket, key)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("expiresIn", SIGNED_URL_EXPIRES_SECONDS))
+                    .retrieve()
+                    .body(SignedUrlResponse.class);
+
+            if (response == null || response.signedURL() == null) {
+                throw new BusinessException("Não foi possível gerar o link de download");
+            }
+
+            // download=<nome> faz o Supabase responder com Content-Disposition: attachment
+            String download = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+            return Optional.of(URI.create(storageUrl + response.signedURL() + "&download=" + download));
+
+        } catch (HttpClientErrorException e) {
+            if (isNotFound(e)) {
+                throw new ResourceNotFoundException("Arquivo não encontrado no armazenamento");
+            }
+            throw new BusinessException("Não foi possível gerar o link de download");
+        } catch (RestClientException e) {
+            throw new BusinessException("Não foi possível gerar o link de download");
+        }
+
+    }
+
+    private record SignedUrlResponse(String signedURL) {
     }
 
     @Override
