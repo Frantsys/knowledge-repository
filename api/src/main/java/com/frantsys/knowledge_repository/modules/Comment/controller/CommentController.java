@@ -19,6 +19,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -98,6 +99,17 @@ public class CommentController {
         CommentResponse comment = commentService.updateById(id, request);
 
         return ResponseEntity.ok(comment);
+
+    }
+
+    @Operation(summary = "Exclui um comentário (dono ou admin)")
+    @PreAuthorize("hasRole('ADMIN') or @securityService.isCommentOwner(#id, authentication.name)")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+
+        commentService.deactivateById(id);
+
+        return ResponseEntity.noContent().build();
 
     }
 

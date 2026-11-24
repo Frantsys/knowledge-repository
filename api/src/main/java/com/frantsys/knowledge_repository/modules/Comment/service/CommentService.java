@@ -110,6 +110,18 @@ public class CommentService {
 
     }
 
+    // Exclusão lógica: o comentário some da lista do material (que só traz ativos)
+    @Transactional
+    public void deactivateById(Long id) {
+
+        Comment comment = findCommentById(id);
+
+        comment.setIsActive(false);
+
+        commentRepository.save(comment);
+
+    }
+
     private CommentResponse save(Comment comment, User author) {
 
         comment.setUser(author);
