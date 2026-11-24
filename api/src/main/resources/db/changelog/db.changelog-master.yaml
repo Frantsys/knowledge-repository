@@ -13,3 +13,5 @@ databaseChangeLog:
       file: db/changelog/migrations/006-performance-indexes.yaml
   - include:
       file: db/changelog/migrations/007-users-avatar.yaml
+  - include:
+      file: db/changelog/migrations/008-users-password-reset.yaml

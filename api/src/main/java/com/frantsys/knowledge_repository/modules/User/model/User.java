@@ -83,6 +83,13 @@ public class User implements UserDetails {
     @Column(name = "avatar_content_type")
     private String avatarContentType;
 
+    // Redefinição de senha: hash SHA-256 do token enviado por link (o token em si nunca é salvo)
+    @Column(name = "reset_token_hash")
+    private String resetTokenHash;
+
+    @Column(name = "reset_token_expires_at")
+    private LocalDateTime resetTokenExpiresAt;
+
     public String getFullName() {
         return firstName + " " + lastName;
     }

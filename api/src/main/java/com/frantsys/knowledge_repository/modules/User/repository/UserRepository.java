@@ -18,4 +18,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     Optional<User> findByAvatarKey(String avatarKey);
 
+    Optional<User> findByResetTokenHash(String resetTokenHash);
+
 }
