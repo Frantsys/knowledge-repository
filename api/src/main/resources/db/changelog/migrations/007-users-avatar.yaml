@@ -1,0 +1,23 @@
+databaseChangeLog:
+  # Foto de perfil: chave no armazenamento (UUID, mesmo storage dos arquivos) e o tipo detectado no upload
+  - changeSet:
+      id: 007-users-avatar
+      author: francis
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: avatar_key
+                  type: VARCHAR(255)
+              - column:
+                  name: avatar_content_type
+                  type: VARCHAR(50)
+        # O GET público da foto procura o usuário pela chave
+        - createIndex:
+            tableName: users
+            indexName: uq_users_avatar_key
+            unique: true
+            columns:
+              - column:
+                  name: avatar_key

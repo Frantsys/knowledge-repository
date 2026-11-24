@@ -28,5 +28,7 @@ public class UserResponse {
     private UserRole role;
     private LocalDateTime createdAt;
     private Boolean isActive;
+    // Caminho relativo da foto (ex.: /v1/api/users/avatars/{chave}); null quando o usuário não tem foto
+    private String avatarUrl;
 
 }

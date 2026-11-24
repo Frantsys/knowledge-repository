@@ -76,6 +76,13 @@ public class User implements UserDetails {
     @Column(nullable = false, name = "is_active")
     private Boolean isActive;
 
+    // Foto de perfil: chave no StorageService (null = sem foto) e o tipo da imagem detectado no upload
+    @Column(name = "avatar_key")
+    private String avatarKey;
+
+    @Column(name = "avatar_content_type")
+    private String avatarContentType;
+
     public String getFullName() {
         return firstName + " " + lastName;
     }

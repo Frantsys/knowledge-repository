@@ -17,12 +17,20 @@ public interface UserMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "isActive", ignore = true)
     @Mapping(target = "authorities", ignore = true)
+    @Mapping(target = "avatarKey", ignore = true)
+    @Mapping(target = "avatarContentType", ignore = true)
     User toEntity(UserRegisterRequest request);
 
     UserAddress toAddressEntity(UserAddressCreateRequest request);
 
+    @Mapping(target = "avatarUrl", expression = "java(avatarUrl(user))")
     UserResponse toResponse(User user);
 
     UserSummaryResponse toSummaryResponse(User user);
+
+    // A chave muda a cada upload, então a URL também: o navegador pode guardar a imagem em cache para sempre
+    default String avatarUrl(User user) {
+        return user.getAvatarKey() == null ? null : "/v1/api/users/avatars/" + user.getAvatarKey();
+    }
 
 }
