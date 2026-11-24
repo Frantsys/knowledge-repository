@@ -13,5 +13,7 @@ public class UserSummaryResponse {
     private String lastName;
     private String email;
     private UserRole role;
+    // Foto do usuário (mesmo formato de UserResponse.avatarUrl); null sem foto
+    private String avatarUrl;
 
 }

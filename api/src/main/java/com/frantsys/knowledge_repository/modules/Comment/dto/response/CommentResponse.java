@@ -17,6 +17,8 @@ public class CommentResponse {
     private Integer likes;
     private LocalDateTime updatedAt;
     private String createdBy;
+    // Foto do autor do comentário; null quando ele não tem foto
+    private String authorAvatarUrl;
     private LocalDateTime createdAt;
     private Boolean isActive;
 

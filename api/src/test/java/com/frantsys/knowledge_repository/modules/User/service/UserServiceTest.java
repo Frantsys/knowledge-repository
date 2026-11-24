@@ -146,7 +146,7 @@ class UserServiceTest {
     @DisplayName("findAllSummary should return every user mapped to UserSummaryResponse")
     void findAllSummary_shouldReturnMappedSummaries() {
         UserSummaryResponse summary = new UserSummaryResponse(
-                1L, "Anna", "Smith", "student@example.com", UserRole.ROLE_STUDENT);
+                1L, "Anna", "Smith", "student@example.com", UserRole.ROLE_STUDENT, null);
 
         when(userRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(user)));
         when(userMapper.toSummaryResponse(user)).thenReturn(summary);

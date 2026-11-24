@@ -8,6 +8,7 @@ import com.frantsys.knowledge_repository.modules.User.model.User;
 import com.frantsys.knowledge_repository.modules.User.model.UserAddress;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
 @Mapper(componentModel = "spring")
 public interface UserMapper {
@@ -26,11 +27,19 @@ public interface UserMapper {
     @Mapping(target = "avatarUrl", expression = "java(avatarUrl(user))")
     UserResponse toResponse(User user);
 
+    @Mapping(target = "avatarUrl", expression = "java(avatarUrl(user))")
     UserSummaryResponse toSummaryResponse(User user);
 
     // A chave muda a cada upload, então a URL também: o navegador pode guardar a imagem em cache para sempre
+    @Named("avatarUrl")
     default String avatarUrl(User user) {
-        return user.getAvatarKey() == null ? null : "/v1/api/users/avatars/" + user.getAvatarKey();
+        return avatarPath(user.getAvatarKey());
+    }
+
+    // Usado também pelo CommentMapper para a foto do autor do comentário
+    @Named("avatarPath")
+    default String avatarPath(String avatarKey) {
+        return avatarKey == null ? null : "/v1/api/users/avatars/" + avatarKey;
     }
 
 }

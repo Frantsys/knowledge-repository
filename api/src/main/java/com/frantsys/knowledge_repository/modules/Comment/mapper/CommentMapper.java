@@ -5,10 +5,11 @@ import com.frantsys.knowledge_repository.modules.Comment.dto.request.CommentRepl
 import com.frantsys.knowledge_repository.modules.Comment.dto.response.CommentResponse;
 import com.frantsys.knowledge_repository.modules.Comment.dto.response.CommentSummaryResponse;
 import com.frantsys.knowledge_repository.modules.Comment.model.Comment;
+import com.frantsys.knowledge_repository.modules.User.mapper.UserMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = UserMapper.class)
 public interface CommentMapper {
 
     @Mapping(target = "id", ignore = true)
@@ -38,6 +39,7 @@ public interface CommentMapper {
     @Mapping(target = "materialId", source = "material.id")
     @Mapping(target = "userId", source = "user.id")
     @Mapping(target = "parentId", source = "parent.id")
+    @Mapping(target = "authorAvatarUrl", source = "user.avatarKey", qualifiedByName = "avatarPath")
     CommentResponse toResponse(Comment comment);
 
     CommentSummaryResponse toSummaryResponse(Comment comment);
