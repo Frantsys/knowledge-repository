@@ -3,6 +3,7 @@ package com.frantsys.knowledge_repository.modules.User.mapper;
 import com.frantsys.knowledge_repository.modules.Auth.dto.request.UserRegisterRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.request.UserAddressCreateRequest;
 import com.frantsys.knowledge_repository.modules.User.dto.response.UserResponse;
+import com.frantsys.knowledge_repository.modules.User.dto.response.AuthorResponse;
 import com.frantsys.knowledge_repository.modules.User.dto.response.UserSummaryResponse;
 import com.frantsys.knowledge_repository.modules.User.model.User;
 import com.frantsys.knowledge_repository.modules.User.model.UserAddress;
@@ -29,6 +30,10 @@ public interface UserMapper {
 
     @Mapping(target = "avatarUrl", expression = "java(avatarUrl(user))")
     UserSummaryResponse toSummaryResponse(User user);
+
+    // Autor de material, visível a todos: sem e-mail nem dados pessoais
+    @Mapping(target = "avatarUrl", expression = "java(avatarUrl(user))")
+    AuthorResponse toAuthorResponse(User user);
 
     // A chave muda a cada upload, então a URL também: o navegador pode guardar a imagem em cache para sempre
     @Named("avatarUrl")

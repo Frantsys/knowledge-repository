@@ -4,7 +4,8 @@ import { apiFetch, type Page } from "./client";
 export interface Material {
   id: number;
   userId: number;
-  user: { id: number; firstName: string; lastName: string; email: string; role: string; avatarUrl: string | null } | null;
+  // Autor público: só nome e foto (a API não expõe e-mail nem dados pessoais de quem publica)
+  user: { id: number; firstName: string; lastName: string; avatarUrl: string | null } | null;
   title: string;
   body: string;
   subject: string;

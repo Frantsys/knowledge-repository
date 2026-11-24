@@ -1,6 +1,6 @@
 package com.frantsys.knowledge_repository.modules.Material.dto.response;
 
-import com.frantsys.knowledge_repository.modules.User.dto.response.UserSummaryResponse;
+import com.frantsys.knowledge_repository.modules.User.dto.response.AuthorResponse;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,7 +12,7 @@ public class MaterialResponse {
 
     private Long id;
     private Long userId;
-    private UserSummaryResponse user;
+    private AuthorResponse user;
     private String title;
     private String body;
     private String subject;

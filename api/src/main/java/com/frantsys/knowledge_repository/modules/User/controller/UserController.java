@@ -120,7 +120,8 @@ public class UserController {
 
     }
 
-    @Operation(summary = "Busca um usuário pelo ID")
+    @Operation(summary = "Busca um usuário pelo ID (o próprio usuário ou admin: a resposta tem CPF, endereço e contato)")
+    @PreAuthorize("hasRole('ADMIN') or @securityService.isSelf(#id, authentication.name)")
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> findById(@PathVariable Long id) {
 
