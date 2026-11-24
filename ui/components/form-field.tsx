@@ -9,6 +9,7 @@ export default function FormField({
   required = false,
   hint,
   error,
+  action,
   className = "",
   children,
 }: {
@@ -17,15 +18,20 @@ export default function FormField({
   required?: boolean;
   hint?: string;
   error?: string;
+  /** Link ou botão na mesma linha do rótulo, à direita (ex.: "Esqueci minha senha") */
+  action?: React.ReactNode;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className={cn("space-y-1.5", className)}>
-      <Label htmlFor={id} className={required ? "font-semibold" : "font-medium"}>
-        {label}
-        {required && <span aria-hidden="true" className="-ml-1 text-destructive">*</span>}
-      </Label>
+      <div className="flex items-center justify-between gap-3">
+        <Label htmlFor={id} className={required ? "font-semibold" : "font-medium"}>
+          {label}
+          {required && <span aria-hidden="true" className="-ml-1 text-destructive">*</span>}
+        </Label>
+        {action}
+      </div>
 
       {children}
 

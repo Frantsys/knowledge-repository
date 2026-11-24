@@ -87,7 +87,7 @@ export async function apiRequest(path: string, init: RequestInit = {}): Promise<
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await apiRequest(path, init);
 
-  if (response.status === 204) return undefined as T;
-
-  return response.json() as Promise<T>;
+  // 202/204 e respostas sem corpo não têm JSON
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }

@@ -72,7 +72,15 @@ export default function LoginPage() {
                     />
                 </FormField>
 
-                <FormField id="password" label="Senha">
+                <FormField
+                    id="password"
+                    label="Senha"
+                    action={
+                        <Link href="/esqueci-senha" className="text-xs font-medium text-primary underline-offset-4 hover:underline">
+                            Esqueci minha senha
+                        </Link>
+                    }
+                >
                     <PasswordInput
                         id="password"
                         value={password}

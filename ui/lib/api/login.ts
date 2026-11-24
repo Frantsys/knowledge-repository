@@ -16,3 +16,12 @@ export async function login(email: string, password: string): Promise<LoginRespo
 
   return data;
 }
+
+// Pede o link de redefinição (a API responde igual exista ou não o e-mail)
+export function requestPasswordReset(email: string): Promise<void> {
+  return apiFetch<void>("/v1/api/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+}
+
+export function resetPassword(token: string, newPassword: string): Promise<void> {
+  return apiFetch<void>("/v1/api/auth/reset-password", { method: "POST", body: JSON.stringify({ token, newPassword }) });
+}

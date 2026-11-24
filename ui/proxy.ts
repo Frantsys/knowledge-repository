@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 // Mesmo nome de lib/api/client.ts (SESSION_COOKIE); o proxy não deve importar módulos da aplicação
 const SESSION_COOKIE = "banca_session";
-const PUBLIC_PATHS = ["/login", "/signup"];
+const PUBLIC_PATHS = ["/login", "/signup", "/esqueci-senha", "/redefinir-senha"];
 
 // Sem cookie de sessão, vai direto para o login no servidor, sem renderizar a tela inicial antes.
 // Quem já está logado e abre /login ou /signup vai para o início.
