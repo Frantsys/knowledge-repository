@@ -1,5 +1,6 @@
 import { BookOpen } from "lucide-react";
 import { ThemeChoice, ThemeToggle } from "@/components/theme-toggle";
+import WakeApi from "@/components/wake-api";
 
 // Linhas de caderno: pauta horizontal + margem vertical, o motivo visual das telas de acesso
 const NOTEBOOK_STYLE: React.CSSProperties = {
@@ -45,6 +46,7 @@ export default function AuthShell({
 
       <main className="relative flex justify-center px-6 py-10 sm:px-10 lg:items-center lg:py-14">
         {/* Tema claro/escuro também nas telas de acesso */}
+        <WakeApi />
         <ThemeToggle className="absolute right-6 top-6 hidden sm:inline-flex" />
         <div className={`w-full ${wide ? "max-w-2xl" : "max-w-sm"}`}>
           {children}

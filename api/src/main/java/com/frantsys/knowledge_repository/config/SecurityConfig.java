@@ -65,6 +65,7 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.POST, "/v1/api/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/v1/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/api/health").permitAll()
                         .requestMatchers(HttpMethod.POST, "/v1/api/auth/forgot-password", "/v1/api/auth/reset-password").permitAll()
                         // Foto de perfil: <img> não envia o token; a chave (UUID) só é entregue a quem já está logado
                         .requestMatchers(HttpMethod.GET, "/v1/api/users/avatars/*").permitAll()

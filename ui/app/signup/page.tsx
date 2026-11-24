@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, ArrowLeft, ArrowRight, Loader2, Search, Share2, Users } from "lucide-react";
 import { createUser } from "@/lib/api/signup";
+import { login } from "@/lib/api/login";
 import { toast } from "@/components/toast";
 import AuthShell from "@/components/auth-shell";
 import FormField from "@/components/form-field";
@@ -198,9 +199,16 @@ export default function Signup() {
         },
       });
 
-      toast("Conta criada! Entre com seu e-mail e senha.");
-
-      router.push("/login");
+      // Entra direto com os dados que a pessoa acabou de digitar (sem passar de novo pelo login)
+      try {
+        await login(email, password);
+        toast("Conta criada! Boas-vindas à Banca de Materiais.");
+        // O login já gravou o cookie de sessão, então o proxy libera o /home; sem recarga, o aviso continua na tela
+        router.push("/home");
+      } catch {
+        toast("Conta criada! Entre com seu e-mail e senha.");
+        router.push("/login");
+      }
     } catch (error) {
       setErrors({ form: error instanceof Error ? error.message : "Não foi possível criar a conta." });
     } finally {
