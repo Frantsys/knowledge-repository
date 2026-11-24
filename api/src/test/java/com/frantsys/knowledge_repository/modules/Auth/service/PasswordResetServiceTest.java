@@ -8,7 +8,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -17,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,6 +34,12 @@ class PasswordResetServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private ObjectProvider<JavaMailSender> mailSenderProvider;
+
+    @Mock
+    private JavaMailSender mailSender;
 
     @InjectMocks
     private PasswordResetService service;
@@ -49,6 +61,35 @@ class PasswordResetServiceTest {
         assertThat(user.getResetTokenHash()).hasSize(64);
         assertThat(user.getResetTokenExpiresAt()).isAfter(LocalDateTime.now());
         verify(userRepository).save(user);
+    }
+
+    @Test
+    void requestResetEmailsTheLinkWhenSmtpIsConfigured() {
+        User user = activeUser();
+        user.setFirstName("Ana");
+        when(userRepository.findByEmail("ana@banca.local")).thenReturn(Optional.of(user));
+        when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
+        ReflectionTestUtils.setField(service, "mailHost", "smtp.exemplo.com");
+        ReflectionTestUtils.setField(service, "frontendUrl", "https://banca.app");
+
+        service.requestReset("ana@banca.local");
+
+        // O envio é em segundo plano
+        ArgumentCaptor<SimpleMailMessage> sent = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender, timeout(2000)).send(sent.capture());
+        assertThat(sent.getValue().getTo()).containsExactly("ana@banca.local");
+        assertThat(sent.getValue().getText()).contains("https://banca.app/redefinir-senha?token=");
+    }
+
+    @Test
+    void requestResetWithoutSmtpDoesNotSend() {
+        when(userRepository.findByEmail("ana@banca.local")).thenReturn(Optional.of(activeUser()));
+        when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
+        ReflectionTestUtils.setField(service, "mailHost", "");
+
+        service.requestReset("ana@banca.local");
+
+        verify(mailSender, never()).send(any(SimpleMailMessage.class));
     }
 
     @Test
