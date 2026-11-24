@@ -342,6 +342,7 @@ export default function Navbar() {
                   href={item.href}
                   transitionTypes={directionTo(navigation.indexOf(item))}
                   className={`
+                    group
                     relative
                     flex
                     h-16
@@ -360,21 +361,20 @@ export default function Navbar() {
                     }
                   `}
                 >
-                  <motion.div
-                    whileHover={{
-                      y: -1,
-                    }}
-                    transition={{
-                      duration: 0.15,
-                    }}
-                  >
-                    <Icon
-                      size={item.name === "Meus materiais" ? 17 : 16}
-                      strokeWidth={active ? 2.2 : 1.9}
-                    />
-                  </motion.div>
+                  <Icon
+                    size={item.name === "Meus materiais" ? 17 : 16}
+                    strokeWidth={active ? 2.2 : 1.9}
+                  />
 
                   <span>{item.name}</span>
+
+                  {/* Hover: prévia discreta do indicador de aba ativa, abrindo do centro (o ícone fica parado) */}
+                  {!active && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-x-0 bottom-0 h-0.5 origin-center scale-x-0 rounded-t bg-purple-200 transition-transform duration-200 ease-out group-hover:scale-x-100"
+                    />
+                  )}
 
                   {/* Indicador animado */}
 
