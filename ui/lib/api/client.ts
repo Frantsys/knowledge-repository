@@ -18,12 +18,29 @@ export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+// O proxy.ts roda no servidor e não enxerga o localStorage: o cookie "banca_session" só avisa que há login,
+// para mandar direto ao /login quem não tem sessão. O JWT continua indo pelo header Authorization.
+export const SESSION_COOKIE = "banca_session";
+
+// Segundos até o JWT expirar (claim exp); se não der para ler, vale até fechar o navegador
+function tokenMaxAge(token: string): string {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const seconds = Math.floor(payload.exp - Date.now() / 1000);
+    return seconds > 0 ? `; max-age=${seconds}` : "; max-age=0";
+  } catch {
+    return "";
+  }
+}
+
 export function setToken(token: string) {
   localStorage.setItem(TOKEN_KEY, token);
+  document.cookie = `${SESSION_COOKIE}=1; path=/; SameSite=Lax${tokenMaxAge(token)}`;
 }
 
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
+  document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0`;
 }
 
 // Transforma o ProblemDetail da API ({ detail, errors: { campo: msg } }) em uma mensagem legível
@@ -60,7 +77,8 @@ export async function apiRequest(path: string, init: RequestInit = {}): Promise<
   }
 
   if (!response.ok) {
-    throw new Error(await errorMessage(response));
+    // status permite à tela distinguir "não encontrado" (404) de falha de rede/servidor
+    throw Object.assign(new Error(await errorMessage(response)), { status: response.status });
   }
 
   return response;
