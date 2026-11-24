@@ -40,7 +40,8 @@ services:
     depends_on:
       - api
     environment:
-      NODE_ENV: production
+      # O container roda "npm run dev": com NODE_ENV=production o next dev deixa de achar rotas aninhadas (ex.: /materiais/[id]/editar dava 404)
+      NODE_ENV: development
       PORT: "3000"
       # O navegador chama a API pelo host, não pelo nome do container
       NEXT_PUBLIC_API_URL: http://localhost:${SPRING_PORT}

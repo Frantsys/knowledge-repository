@@ -23,3 +23,5 @@ build/
 
 # Node
 node_modules/
+# Credenciais locais de teste
+*.local.md
