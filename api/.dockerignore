@@ -1,0 +1,7 @@
+# A imagem compila o próprio JAR: saída local do Maven, uploads e arquivos de IDE não entram no build
+target
+uploads
+.idea
+.vscode
+*.iml
+.env*

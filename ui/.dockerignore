@@ -1,0 +1,14 @@
+# Instaladas dentro da imagem (Linux): a node_modules do Windows tem binários nativos de outra plataforma
+node_modules
+# Saída de build local (centenas de MB) e caches
+.next
+out
+*.tsbuildinfo
+# Variáveis locais: o compose passa NEXT_PUBLIC_API_URL; segredos não entram na imagem
+.env*
+!.env.example
+# Ferramentas e artefatos de desenvolvimento
+.git
+.impeccable
+.playwright-mcp
+npm-debug.log*
