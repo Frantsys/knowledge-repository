@@ -1,0 +1,29 @@
+# Mantém a API de produção acordada: o Render gratuito hiberna depois de 15 min sem requisições,
+# e a primeira pessoa a entrar esperaria 30-60 s. Chamar o /health a cada 10 min evita isso.
+# Configure a variável do repositório API_URL (Settings > Secrets and variables > Actions > Variables),
+# por exemplo https://sua-api.onrender.com
+name: Manter a API acordada
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Chamar o /health
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: |
+          if [ -z "$API_URL" ]; then
+            echo "::warning::Variável API_URL não configurada; nada a fazer."
+            exit 0
+          fi
+          # Se a API estava dormindo, a primeira resposta pode levar até ~60 s
+          curl --fail --silent --show-error --max-time 90 --retry 2 --retry-delay 10 \
+            -o /dev/null -w "HTTP %{http_code} em %{time_total}s\n" "${API_URL%/}/v1/api/health"
