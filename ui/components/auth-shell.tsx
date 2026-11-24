@@ -1,4 +1,5 @@
 import { BookOpen } from "lucide-react";
+import { ThemeChoice, ThemeToggle } from "@/components/theme-toggle";
 
 // Linhas de caderno: pauta horizontal + margem vertical, o motivo visual das telas de acesso
 const NOTEBOOK_STYLE: React.CSSProperties = {
@@ -29,7 +30,7 @@ export default function AuthShell({
   wide?: boolean;
 }) {
   return (
-    <div className={`min-h-dvh bg-white lg:grid ${wide ? "lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]" : "lg:grid-cols-2"}`}>
+    <div className={`min-h-dvh bg-background lg:grid ${wide ? "lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]" : "lg:grid-cols-2"}`}>
       <header
         className="relative overflow-hidden bg-[linear-gradient(160deg,#1f0050_0%,#3a0ea6_55%,#5b21d6_100%)] text-white lg:sticky lg:top-0 lg:h-dvh"
       >
@@ -42,8 +43,13 @@ export default function AuthShell({
         </div>
       </header>
 
-      <main className="flex justify-center px-6 py-10 sm:px-10 lg:items-center lg:py-14">
-        <div className={`w-full ${wide ? "max-w-2xl" : "max-w-sm"}`}>{children}</div>
+      <main className="relative flex justify-center px-6 py-10 sm:px-10 lg:items-center lg:py-14">
+        {/* Tema claro/escuro também nas telas de acesso */}
+        <ThemeToggle className="absolute right-6 top-6 hidden sm:inline-flex" />
+        <div className={`w-full ${wide ? "max-w-2xl" : "max-w-sm"}`}>
+          <ThemeChoice className="mb-8 ml-auto w-48 sm:hidden" />
+          {children}
+        </div>
       </main>
     </div>
   );

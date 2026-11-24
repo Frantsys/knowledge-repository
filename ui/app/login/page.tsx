@@ -5,7 +5,10 @@ import Link from "next/link";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { login } from "@/lib/api/login";
 import AuthShell from "@/components/auth-shell";
-import FormField, { INPUT_CLASS } from "@/components/form-field";
+import FormField from "@/components/form-field";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import PasswordInput from "@/components/password-input";
 
 export default function LoginPage() {
@@ -41,21 +44,21 @@ export default function LoginPage() {
                 <div className="max-w-md">
                     <p className="text-4xl font-semibold leading-[1.1] tracking-tight text-balance xl:text-5xl">
                         Compartilhe conhecimento.
-                        <span className="block text-purple-200">Encontre o que precisa para estudar.</span>
+                        <span className="block text-white/80">Encontre o que precisa para estudar.</span>
                     </p>
 
-                    <p className="mt-8 text-sm text-purple-100">Comunidade acadêmica colaborativa</p>
+                    <p className="mt-8 text-sm text-white/80">Comunidade acadêmica colaborativa</p>
                 </div>
             }
         >
             <h1 className="text-[1.75rem] font-semibold leading-tight tracking-tight text-brand-ink">
                 Bem-vindo de volta
             </h1>
-            <p className="mt-2 text-sm text-gray-600">Entre para acessar a comunidade</p>
+            <p className="mt-2 text-sm text-muted-foreground">Entre para acessar a comunidade</p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
                 <FormField id="email" label="E-mail">
-                    <input
+                    <Input
                         id="email"
                         type="email"
                         value={email}
@@ -65,7 +68,7 @@ export default function LoginPage() {
                         autoComplete="email"
                         autoFocus
                         aria-invalid={Boolean(error)}
-                        className={INPUT_CLASS}
+                        className="h-11"
                     />
                 </FormField>
 
@@ -81,25 +84,26 @@ export default function LoginPage() {
                 </FormField>
 
                 {error && (
-                    <p role="alert" className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700">
-                        <AlertCircle size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
-                        <span className="whitespace-pre-line">{error}</span>
-                    </p>
+                    <Alert variant="destructive">
+                        <AlertCircle />
+                        <AlertDescription className="whitespace-pre-line">{error}</AlertDescription>
+                    </Alert>
                 )}
 
-                <button
+                <Button
                     type="submit"
+                    size="lg"
                     disabled={loading}
-                    className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-purple-600 text-sm font-semibold text-white shadow-[0_1px_2px_rgb(16_24_40/0.08)] transition hover:bg-purple-700 active:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="h-11 w-full text-sm font-semibold"
                 >
-                    {loading && <Loader2 size={17} className="animate-spin" aria-hidden="true" />}
+                    {loading && <Loader2 className="animate-spin" aria-hidden="true" />}
                     {loading ? "Entrando..." : "Entrar"}
-                </button>
+                </Button>
             </form>
 
-            <p className="mt-8 border-t border-gray-200 pt-6 text-center text-sm text-gray-600">
+            <p className="mt-8 border-t border-border pt-6 text-center text-sm text-muted-foreground">
                 Ainda não tem uma conta?{" "}
-                <Link href="/signup" className="font-semibold text-purple-700 underline-offset-4 hover:underline">
+                <Link href="/signup" className="font-semibold text-primary underline-offset-4 hover:underline">
                     Cadastre-se
                 </Link>
             </p>

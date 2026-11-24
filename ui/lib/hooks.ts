@@ -25,3 +25,6 @@ export function requestPublishModal() {
 export const ACCEPTED_FILES = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.zip";
 export const ACCEPTED_FILES_HINT = "PDF, Word, PowerPoint, Excel, TXT, imagem ou ZIP · até 10 MB";
 export const MAX_FILE_BYTES = 10 * 1024 * 1024; // spring.servlet.multipart.max-file-size da API
+
+// Disciplinas oferecidas ao publicar e editar um material
+export const SUBJECTS = ["Direito", "Tecnologia", "Administração", "Engenharia", "Outros"];

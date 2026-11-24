@@ -36,7 +36,7 @@ export default function LoadingScreen() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #f7f5fb;
+          background: var(--background);
           overflow: hidden;
         }
         .ls-glow {
@@ -82,7 +82,7 @@ export default function LoadingScreen() {
               transparent 0 14px,
               rgba(157, 18, 245, 0.18) 14px 16px
             ),
-            #ffffff;
+            var(--card);
           background-size: calc(100% - 28px) 100%, 100% 100%;
           background-repeat: no-repeat;
           background-position: 14px 18px, 0 0;
@@ -102,7 +102,7 @@ export default function LoadingScreen() {
           border-radius: 0 6px 6px 0;
           transform-origin: left center;
           animation: ls-flip 2.4s ease-in-out infinite;
-          background-color: #fbf7ff;
+          background-color: var(--card);
         }
         .ls-f1 { animation-delay: 0s; }
         .ls-f2 { animation-delay: 0.25s; }
@@ -132,7 +132,7 @@ export default function LoadingScreen() {
           font-size: 28px;
           font-weight: 700;
           letter-spacing: -0.02em;
-          background: linear-gradient(90deg, #2a0a5e 0%, #9d12f5 50%, #2a0a5e 100%);
+          background: linear-gradient(90deg, var(--brand-ink) 0%, #9d12f5 50%, var(--brand-ink) 100%);
           background-size: 200% 100%;
           -webkit-background-clip: text;
           background-clip: text;
@@ -148,7 +148,7 @@ export default function LoadingScreen() {
           align-items: center;
           gap: 4px;
           font-size: 14px;
-          color: #6b6580;
+          color: var(--muted-foreground);
         }
         .ls-dots { display: inline-flex; gap: 3px; margin-left: 2px; }
         .ls-dots i {

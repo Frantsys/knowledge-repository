@@ -7,7 +7,14 @@ import { AlertCircle, Loader2, Search, Share2, Users } from "lucide-react";
 import { createUser } from "@/lib/api/signup";
 import { toast } from "@/components/toast";
 import AuthShell from "@/components/auth-shell";
-import FormField, { INPUT_CLASS } from "@/components/form-field";
+import FormField from "@/components/form-field";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import PasswordInput from "@/components/password-input";
 import { maskPhone } from "@/lib/masks";
 
@@ -43,7 +50,7 @@ const BENEFITS = [
 
 function Section({ title, first = false, children }: { title: string; first?: boolean; children: React.ReactNode }) {
   return (
-    <fieldset className={first ? "" : "mt-9 border-t border-gray-200 pt-7"}>
+    <fieldset className={first ? "" : "mt-9 border-t border-border pt-7"}>
       <legend className="sr-only">{title}</legend>
       <p aria-hidden="true" className="mb-5 text-base font-semibold text-brand-ink">
         {title}
@@ -123,17 +130,17 @@ export default function Signup() {
         <div className="max-w-sm">
           <p className="text-4xl font-semibold leading-[1.1] tracking-tight text-balance">Faça parte da comunidade</p>
 
-          <p className="mt-4 text-base leading-relaxed text-purple-100">
+          <p className="mt-4 text-base leading-relaxed text-white/80">
             Compartilhe materiais, ajude outros estudantes e aprenda em conjunto.
           </p>
 
           <ul className="mt-10 space-y-6">
             {BENEFITS.map(({ icon: Icon, title, text }) => (
               <li key={title} className="flex gap-4">
-                <Icon size={20} strokeWidth={1.8} aria-hidden="true" className="mt-0.5 shrink-0 text-purple-200" />
+                <Icon size={20} strokeWidth={1.8} aria-hidden="true" className="mt-0.5 shrink-0 text-white/80" />
                 <div>
                   <p className="text-sm font-semibold">{title}</p>
-                  <p className="mt-0.5 text-sm text-purple-200">{text}</p>
+                  <p className="mt-0.5 text-sm text-white/80">{text}</p>
                 </div>
               </li>
             ))}
@@ -142,28 +149,28 @@ export default function Signup() {
       }
     >
       <h1 className="text-[1.75rem] font-semibold leading-tight tracking-tight text-brand-ink">Crie sua conta</h1>
-      <p className="mt-2 text-sm text-gray-600">
+      <p className="mt-2 text-sm text-muted-foreground">
         Comece a compartilhar conhecimento gratuitamente. Campos marcados com{" "}
-        <span className="font-semibold text-red-600">*</span> são obrigatórios.
+        <span className="font-semibold text-destructive">*</span> são obrigatórios.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-9">
         <Section title="Acesso" first>
           <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <FormField id="firstName" label="Nome" required>
-              <input id="firstName" name="firstName" type="text" required autoComplete="given-name" className={INPUT_CLASS} />
+              <Input id="firstName" name="firstName" type="text" required autoComplete="given-name" className="h-11" />
             </FormField>
 
             <FormField id="lastName" label="Sobrenome" required>
-              <input id="lastName" name="lastName" type="text" required autoComplete="family-name" className={INPUT_CLASS} />
+              <Input id="lastName" name="lastName" type="text" required autoComplete="family-name" className="h-11" />
             </FormField>
 
             <FormField id="email" label="E-mail" required>
-              <input id="email" name="email" type="email" required autoComplete="email" placeholder="seu@email.com" className={INPUT_CLASS} />
+              <Input id="email" name="email" type="email" required autoComplete="email" placeholder="seu@email.com" className="h-11" />
             </FormField>
 
             <FormField id="confirmEmail" label="Confirmar e-mail" required error={errors.email}>
-              <input
+              <Input
                 id="confirmEmail"
                 name="confirmEmail"
                 type="email"
@@ -171,7 +178,7 @@ export default function Signup() {
                 autoComplete="email"
                 aria-invalid={Boolean(errors.email)}
                 aria-describedby={errors.email ? "confirmEmail-error" : undefined}
-                className={INPUT_CLASS}
+                className="h-11"
               />
             </FormField>
 
@@ -204,7 +211,7 @@ export default function Signup() {
         <Section title="Sobre você">
           <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <FormField id="cpf" label="CPF" required>
-              <input
+              <Input
                 id="cpf"
                 name="cpf"
                 type="text"
@@ -214,12 +221,12 @@ export default function Signup() {
                 onChange={(event) => {
                   event.target.value = maskCpf(event.target.value);
                 }}
-                className={`${INPUT_CLASS} tabular-nums`}
+                className="h-11 tabular-nums"
               />
             </FormField>
 
             <FormField id="phoneNumber" label="Telefone" required>
-              <input
+              <Input
                 id="phoneNumber"
                 name="phoneNumber"
                 type="tel"
@@ -230,35 +237,37 @@ export default function Signup() {
                 onChange={(event) => {
                   event.target.value = maskPhone(event.target.value);
                 }}
-                className={`${INPUT_CLASS} tabular-nums`}
+                className="h-11 tabular-nums"
               />
             </FormField>
 
             <FormField id="course" label="Curso" required className="sm:col-span-2">
-              <input id="course" name="course" type="text" required placeholder="Ex.: Direito" className={INPUT_CLASS} />
+              <Input id="course" name="course" type="text" required placeholder="Ex.: Direito" className="h-11" />
             </FormField>
 
             <FormField id="gender" label="Gênero" required>
-              <select id="gender" name="gender" required defaultValue="" className={INPUT_CLASS}>
-                <option value="" disabled>
-                  Selecione
-                </option>
-                <option value="Feminino">Feminino</option>
-                <option value="Masculino">Masculino</option>
-                <option value="Outro">Outro</option>
-                <option value="Prefiro não informar">Prefiro não informar</option>
-              </select>
+              <Select name="gender" required>
+                <SelectTrigger id="gender" className="h-11 w-full">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Feminino">Feminino</SelectItem>
+                  <SelectItem value="Masculino">Masculino</SelectItem>
+                  <SelectItem value="Outro">Outro</SelectItem>
+                  <SelectItem value="Prefiro não informar">Prefiro não informar</SelectItem>
+                </SelectContent>
+              </Select>
             </FormField>
 
             <FormField id="birthDate" label="Data de nascimento" required>
-              <input
+              <Input
                 id="birthDate"
                 name="birthDate"
                 type="date"
                 required
                 autoComplete="bday"
                 max={new Date().toISOString().slice(0, 10)}
-                className={INPUT_CLASS}
+                className="h-11"
               />
             </FormField>
           </div>
@@ -276,7 +285,7 @@ export default function Signup() {
                 required
                 className={addressField.span}
               >
-                <input
+                <Input
                   id={addressField.name}
                   name={addressField.name}
                   type="text"
@@ -291,58 +300,58 @@ export default function Signup() {
                         }
                       : undefined
                   }
-                  className={`${INPUT_CLASS} ${addressField.name === "zipcode" ? "tabular-nums" : ""}`}
+                  className={cn("h-11", addressField.name === "zipcode" && "tabular-nums")}
                 />
               </FormField>
             ))}
           </div>
         </Section>
 
-        <div className="mt-9 border-t border-gray-200 pt-7">
+        <div className="mt-9 border-t border-border pt-7">
           <div className="flex items-start gap-3">
-            <input
+            <Checkbox
               id="terms"
-              type="checkbox"
               checked={acceptedTerms}
-              onChange={(event) => setAcceptedTerms(event.target.checked)}
+              onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
               aria-invalid={Boolean(errors.terms)}
               aria-describedby={errors.terms ? "terms-error" : undefined}
-              className="mt-0.5 h-[1.125rem] w-[1.125rem] shrink-0 cursor-pointer rounded accent-purple-600"
+              className="mt-0.5"
             />
 
-            <label htmlFor="terms" className="cursor-pointer text-sm leading-5 text-gray-700">
-              Li e aceito os <span className="font-medium text-purple-700">Termos de Uso</span> e a{" "}
-              <span className="font-medium text-purple-700">Política de Privacidade</span>
-            </label>
+            <Label htmlFor="terms" className="inline cursor-pointer font-normal leading-5 text-foreground/90">
+              Li e aceito os <span className="font-medium text-primary">Termos de Uso</span> e a{" "}
+              <span className="font-medium text-primary">Política de Privacidade</span>
+            </Label>
           </div>
 
           {errors.terms && (
-            <p id="terms-error" className="mt-2 pl-[1.875rem] text-xs text-red-600">
+            <p id="terms-error" className="mt-2 pl-7 text-xs text-destructive">
               {errors.terms}
             </p>
           )}
         </div>
 
         {errors.form && (
-          <p role="alert" className="mt-6 flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700">
-            <AlertCircle size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
-            <span className="whitespace-pre-line">{errors.form}</span>
-          </p>
+          <Alert variant="destructive" className="mt-6">
+            <AlertCircle />
+            <AlertDescription className="whitespace-pre-line">{errors.form}</AlertDescription>
+          </Alert>
         )}
 
-        <button
+        <Button
           type="submit"
+          size="lg"
           disabled={submitting}
-          className="mt-7 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-purple-600 text-sm font-semibold text-white shadow-[0_1px_2px_rgb(16_24_40/0.08)] transition hover:bg-purple-700 active:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:px-8"
+          className="mt-7 h-11 w-full text-sm font-semibold sm:w-auto sm:px-8"
         >
-          {submitting && <Loader2 size={17} className="animate-spin" aria-hidden="true" />}
+          {submitting && <Loader2 className="animate-spin" aria-hidden="true" />}
           {submitting ? "Criando conta..." : "Criar conta"}
-        </button>
+        </Button>
       </form>
 
-      <p className="mt-8 border-t border-gray-200 pt-6 text-sm text-gray-600">
+      <p className="mt-8 border-t border-border pt-6 text-sm text-muted-foreground">
         Já possui uma conta?{" "}
-        <Link href="/login" className="font-semibold text-purple-700 underline-offset-4 hover:underline">
+        <Link href="/login" className="font-semibold text-primary underline-offset-4 hover:underline">
           Entrar
         </Link>
       </p>

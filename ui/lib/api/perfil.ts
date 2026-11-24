@@ -65,13 +65,6 @@ export function removeAvatar(): Promise<UserProfile> {
   return apiFetch<UserProfile>("/v1/api/users/me/avatar", { method: "DELETE" });
 }
 
-// A navbar fica montada entre as páginas: quem altera o perfil avisa por este evento para ela atualizar nome e foto
-export const PROFILE_UPDATED_EVENT = "profile-updated";
-
-export function notifyProfileUpdated(user: UserProfile) {
-  window.dispatchEvent(new CustomEvent<UserProfile>(PROFILE_UPDATED_EVENT, { detail: user }));
-}
-
 export function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   return apiFetch<void>("/v1/api/users/password", {
     method: "PATCH",

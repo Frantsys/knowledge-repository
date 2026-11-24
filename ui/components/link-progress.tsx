@@ -13,8 +13,8 @@ export default function LinkProgress() {
   if (!pending || typeof document === "undefined") return null;
 
   return createPortal(
-    <div role="status" aria-label="Carregando página" className="link-progress fixed inset-x-0 top-16 z-40 h-0.5 overflow-hidden bg-purple-100">
-      <span className="page-progress block h-full w-1/3 bg-purple-600" />
+    <div role="status" aria-label="Carregando página" className="link-progress fixed inset-x-0 top-16 z-40 h-0.5 overflow-hidden bg-accent">
+      <span className="page-progress block h-full w-1/3 bg-primary" />
     </div>,
     document.body
   );
