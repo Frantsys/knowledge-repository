@@ -1,12 +1,17 @@
-import { API_URL } from "@/lib/api/client";
+"use client";
 
-// Foto de uma pessoa (autor de material, de comentário ou o próprio usuário) ou a inicial do nome, sem foto.
-// className define tamanho, arredondamento e fonte; fallbackClassName, as cores do círculo com a inicial.
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { API_URL } from "@/lib/api/client";
+import { cn } from "@/lib/utils";
+
+// Foto de uma pessoa (autor de material, de comentário ou o próprio usuário), com o Avatar do shadcn/ui:
+// a inicial do nome aparece enquanto a foto carrega ou quando não há foto.
+// className define tamanho e fonte; fallbackClassName, as cores do círculo com a inicial.
 export default function UserAvatar({
   avatarUrl,
   name,
   className = "",
-  fallbackClassName = "bg-purple-600 text-white",
+  fallbackClassName = "bg-primary text-primary-foreground",
 }: {
   avatarUrl: string | null | undefined;
   name: string;
@@ -16,15 +21,11 @@ export default function UserAvatar({
   const initial = name.trim().charAt(0).toUpperCase();
 
   return (
-    <span
-      className={`flex shrink-0 items-center justify-center overflow-hidden font-semibold ${avatarUrl ? "bg-gray-100" : fallbackClassName} ${className}`}
-    >
-      {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- imagem vem da API (outro host), sem otimização do Next
-        <img src={`${API_URL}${avatarUrl}`} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
-      ) : (
-        initial
+    <Avatar className={cn("after:hidden", className)}>
+      {avatarUrl && (
+        <AvatarImage src={`${API_URL}${avatarUrl}`} alt="" className="animate-in fade-in-0 duration-150" />
       )}
-    </span>
+      <AvatarFallback className={cn("font-semibold", fallbackClassName)}>{initial}</AvatarFallback>
+    </Avatar>
   );
 }

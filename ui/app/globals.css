@@ -1,25 +1,170 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-@theme inline {
-  --color-background: #ffffff;
-  --color-foreground: #171717;
-  /* Roxo-escuro único para títulos (antes havia 6 tons diferentes espalhados pelas telas) */
-  --color-brand-ink: #1b0f55;
-  --color-surface: #f8f7fc;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Modo escuro por classe (.dark no <html>, controlado pelo next-themes) */
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------
+   Tema (tokens do shadcn/ui) com a paleta da Banca de Materiais.
+   Claro: fundo lilás bem claro, cartões brancos, roxo da marca nas ações.
+   Escuro: fundo violeta-acinzentado profundo; o roxo clareia para manter contraste com o fundo.
+   --------------------------------------------------------------- */
+:root {
+  --background: oklch(0.982 0.006 300);
+  --foreground: oklch(0.24 0.03 285);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.03 285);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.03 285);
+  --primary: oklch(0.558 0.288 302.321);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.967 0.003 264.542);
+  --secondary-foreground: oklch(0.3 0.03 285);
+  --muted: oklch(0.955 0.006 300);
+  --muted-foreground: oklch(0.47 0.03 285);
+  --accent: oklch(0.977 0.014 308.299);
+  --accent-foreground: oklch(0.496 0.265 301.924);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0.008 300);
+  --input: oklch(0.885 0.01 300);
+  --ring: oklch(0.558 0.288 302.321);
+  --radius: 0.625rem;
+  /* Títulos: roxo-escuro da marca */
+  --brand-ink: oklch(0.22 0.12 285);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
-body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+.dark {
+  --background: oklch(0.17 0.018 285);
+  --foreground: oklch(0.95 0.006 300);
+  --card: oklch(0.215 0.02 285);
+  --card-foreground: oklch(0.95 0.006 300);
+  --popover: oklch(0.235 0.022 285);
+  --popover-foreground: oklch(0.95 0.006 300);
+  --primary: oklch(0.74 0.16 305);
+  --primary-foreground: oklch(0.2 0.06 300);
+  --secondary: oklch(0.27 0.02 285);
+  --secondary-foreground: oklch(0.95 0.006 300);
+  --muted: oklch(0.26 0.02 285);
+  --muted-foreground: oklch(0.73 0.02 290);
+  --accent: oklch(0.3 0.06 300);
+  --accent-foreground: oklch(0.88 0.08 305);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.74 0.16 305);
+  --brand-ink: oklch(0.93 0.035 300);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand-ink: var(--brand-ink);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    /* Reserva sempre o espaço da barra de rolagem: páginas curtas e longas ficam com o conteúdo na mesma posição */
+    scrollbar-gutter: stable;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* Largura do conteúdo das telas logadas (e da navbar): mesmas bordas em todas as páginas,
+   para o título e os cards não mudarem de lugar ao trocar de aba */
+@utility page-container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1200px;
+  padding-inline: 1.25rem;
+
+  @media (width >= 40rem) {
+    padding-inline: 2rem;
+  }
+
+  @media (width >= 64rem) {
+    padding-inline: 2.5rem;
+  }
 }
 
 /* Fora de @layer de propósito: estilos sem camada vencem os utilitários, então o foco por teclado
    fica visível mesmo nos elementos que usam outline-none */
 :where(a, button, select, summary, [tabindex], [role="button"]):focus-visible {
-  outline: 2px solid #7c3aed;
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
@@ -35,13 +180,13 @@ body {
 }
 
 ::selection {
-  background: #ede9fe;
-  color: var(--color-brand-ink);
+  background: color-mix(in oklch, var(--primary) 22%, transparent);
+  color: var(--foreground);
 }
 
 input,
 textarea {
-  caret-color: #7c3aed;
+  caret-color: var(--primary);
 }
 
 /* ---------------------------------------------------------------
@@ -182,12 +327,58 @@ textarea {
   }
 }
 
-/* Reduzir movimento: sem deslocamento nem desfoque, só a troca de opacidade, curta */
+/* Reduzir movimento: sem deslocamento nem desfoque nas transições de página */
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(*),
   ::view-transition-new(*),
   ::view-transition-group(*) {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Esqueletos (components/skeleton.tsx, sobre o Skeleton do shadcn)
+   Brilho que percorre o bloco no lugar do pulso, no tom do tema (claro ou escuro).
+   --------------------------------------------------------------- */
+.skeleton-shimmer {
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0,
+    color-mix(in oklch, var(--card) 55%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+}
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+/* Só aparece se o carregamento passar de 150ms: respostas rápidas não piscam o esqueleto */
+.skeleton-delayed {
+  opacity: 0;
+  animation: skeleton-fade-in 160ms ease-out 150ms forwards;
+}
+@keyframes skeleton-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+    background-image: none;
+  }
+  .skeleton-delayed {
+    animation: none;
+    opacity: 1;
   }
 }
