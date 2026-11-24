@@ -1,23 +1,20 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, Clock3, Download, FileText, Folder, Loader2, Pencil, RotateCcw, Send } from "lucide-react";
+import { ArrowLeft, Clock3, Download, FileText, Folder, GraduationCap, Loader2, Pencil, RotateCcw } from "lucide-react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { Skeleton, SkeletonGroup } from "@/components/skeleton";
 import SubjectCover from "@/components/subject-cover";
 import { toast } from "@/components/toast";
 import UserAvatar from "@/components/user-avatar";
-import { createComment, type Comment } from "@/lib/api/comments";
 import { downloadFile, type MaterialFile } from "@/lib/api/files";
-import { useComments, useFiles, useMaterial, useMe } from "@/lib/api/swr";
+import { useFiles, useMaterial, useMe } from "@/lib/api/swr";
+import Comments from "./comments";
 import MaterialSkeleton from "./material-skeleton";
 
 function formatDate(date: string) {
@@ -29,20 +26,15 @@ export default function MaterialPage() {
   const params = useParams();
   const id = Number(params.id);
 
-  const [newComment, setNewComment] = useState("");
-  const [commentError, setCommentError] = useState<string | null>(null);
-  const [sendingComment, setSendingComment] = useState(false);
   const [downloading, setDownloading] = useState<number | "all" | null>(null);
 
   // O material decide quando a página aparece; arquivos e comentários carregam em paralelo,
   // cada um com o próprio esqueleto, em vez de a página inteira esperar as quatro respostas
   const { data, error, isLoading: loading, mutate: retryMaterial } = useMaterial(id);
   const { data: filesPage, isLoading: loadingFiles } = useFiles(id);
-  const { data: commentsPage, isLoading: loadingComments, mutate: mutateComments } = useComments(id);
   const { data: me } = useMe();
 
   const files: MaterialFile[] = filesPage?.content ?? [];
-  const comments: Comment[] = commentsPage?.content ?? [];
   // 404 vira "não encontrado"; qualquer outra falha mostra o erro com opção de tentar de novo
   const loadError = error && (error as Error & { status?: number }).status !== 404 ? error.message : null;
 
@@ -63,23 +55,6 @@ export default function MaterialPage() {
       toast(err instanceof Error ? err.message : "Não foi possível baixar o arquivo.", { type: "error" });
     } finally {
       setDownloading(null);
-    }
-  }
-
-  async function handleComment(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setCommentError(null);
-    setSendingComment(true);
-
-    try {
-      const comment = await createComment(id, newComment.trim());
-      // Entra no topo da lista na hora, sem buscar todos os comentários de novo
-      await mutateComments((page) => page && { ...page, content: [comment, ...page.content] }, { revalidate: false });
-      setNewComment("");
-    } catch (err) {
-      setCommentError(err instanceof Error ? err.message : "Não foi possível comentar.");
-    } finally {
-      setSendingComment(false);
     }
   }
 
@@ -127,20 +102,18 @@ export default function MaterialPage() {
 
   const isOwner = me !== undefined && data.userId === me.id;
   const paragraphs = data.body.split(/\n+/).filter(Boolean);
-  const filesLabel = loadingFiles ? "Arquivos…" : `${files.length} ${files.length === 1 ? "arquivo" : "arquivos"}`;
-  const publishedAt = formatDate(data.createdAt);
 
   return (
     <main className="min-h-[calc(100dvh-4rem)] bg-background">
-      <div className="page-container pt-8 pb-16 lg:pt-10">
+      <div className="mx-auto max-w-4xl px-5 pt-8 pb-16 sm:px-8 lg:pt-10">
         <Button variant="ghost" onClick={goBack} className="mb-6 -ml-2 text-muted-foreground">
           <ArrowLeft />
           Voltar
         </Button>
 
-        {/* Cabeçalho do material */}
+        {/* Cabeçalho: capa, autoria e os arquivos (o motivo da visita) logo abaixo */}
         <Card className="gap-0 overflow-hidden rounded-2xl py-0">
-          <SubjectCover subject={data.subject} className="h-[220px] sm:h-[280px]">
+          <SubjectCover subject={data.subject} className="h-[200px] sm:h-[240px]">
             <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
             <div className="absolute inset-x-5 bottom-5 sm:inset-x-8 sm:bottom-7">
               <Badge className="gap-1.5 bg-card/90 text-primary backdrop-blur">
@@ -155,188 +128,103 @@ export default function MaterialPage() {
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-2">
                 <UserAvatar avatarUrl={data.user?.avatarUrl} name={data.createdBy} className="size-6 text-xs" fallbackClassName="bg-accent text-accent-foreground" />
-                Por {data.createdBy}
+                <span>
+                  Por <span className="font-medium text-foreground">{data.createdBy}</span>
+                </span>
               </span>
               <span className="flex items-center gap-2">
-                <FileText className="size-4 text-primary" />
-                {filesLabel}
+                <GraduationCap className="size-4 text-primary" />
+                {data.course}
               </span>
               <span className="flex items-center gap-2">
                 <Clock3 className="size-4 text-primary" />
-                {publishedAt}
+                {formatDate(data.createdAt)}
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="lg"
-                disabled={loadingFiles || files.length === 0 || downloading !== null}
-                onClick={() => handleDownload("all")}
-                title={files.length === 0 ? "Este material não tem arquivos anexados" : undefined}
-                className="h-10 text-primary hover:text-primary"
-              >
-                {downloading === "all" ? <Loader2 className="animate-spin" /> : <Download />}
-                {downloading === "all" ? "Baixando..." : files.length > 1 ? `Baixar ${files.length} arquivos` : "Baixar"}
+            {isOwner && (
+              <Button variant="outline" size="lg" className="h-10" onClick={() => router.push(`/materiais/${data.id}/editar`)}>
+                <Pencil />
+                Editar
               </Button>
+            )}
+          </div>
 
-              {isOwner && (
-                <Button size="lg" className="h-10" onClick={() => router.push(`/materiais/${data.id}/editar`)}>
-                  <Pencil />
-                  Editar
+          <div className="border-t bg-muted/30 px-5 py-4 sm:px-8">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold">Arquivos{!loadingFiles && ` (${files.length})`}</h2>
+              {files.length > 1 && (
+                <Button size="sm" disabled={downloading !== null} onClick={() => handleDownload("all")}>
+                  {downloading === "all" ? <Loader2 className="animate-spin" /> : <Download />}
+                  {downloading === "all" ? "Baixando..." : "Baixar tudo"}
                 </Button>
               )}
             </div>
+
+            {loadingFiles && (
+              <SkeletonGroup label="Carregando arquivos">
+                <Skeleton className="h-12 w-full rounded-lg" />
+              </SkeletonGroup>
+            )}
+
+            {!loadingFiles && files.length === 0 && <p className="text-sm text-muted-foreground">Este material não tem arquivos anexados.</p>}
+
+            <ul className="space-y-2">
+              {files.map((file) => (
+                <li key={file.id} className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                    <FileText className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{file.name}</p>
+                    <p className="text-xs text-muted-foreground">{fileDetails(file)}</p>
+                  </div>
+                  <Button
+                    variant={files.length === 1 ? "default" : "outline"}
+                    disabled={downloading !== null}
+                    onClick={() => handleDownload(file)}
+                    aria-label={`Baixar ${file.name}`}
+                  >
+                    {downloading === file.id ? <Loader2 className="animate-spin" /> : <Download />}
+                    <span className="hidden sm:inline">{downloading === file.id ? "Baixando..." : "Baixar"}</span>
+                  </Button>
+                </li>
+              ))}
+            </ul>
           </div>
         </Card>
 
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
-          {/* Conteúdo e comentários */}
-          <Card className="gap-0 rounded-2xl px-6 py-7 sm:px-10 sm:py-9">
-            <section>
-              <h2 className="text-xl font-bold text-brand-ink">Sobre este material</h2>
-              <p className="mt-3 text-sm leading-7 text-muted-foreground">Material do curso de {data.course}.</p>
-            </section>
-
-            <Separator className="my-8" />
-
-            <section>
-              <h2 className="text-xl font-bold text-brand-ink">Conteúdo</h2>
-              <div className="mt-3 space-y-3">
-                {paragraphs.map((paragraph, index) => (
-                  <p key={index} className="text-base leading-7 text-foreground/80">
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
-            </section>
-
-            <Separator className="my-8" />
-
-            <section>
-              <h2 className="text-lg font-bold text-brand-ink">
-                Comentários{loadingComments ? "" : ` (${comments.length})`}
-              </h2>
-
-              <form onSubmit={handleComment} className="mt-4 space-y-2">
-                <Label htmlFor="new-comment" className="sr-only">
-                  Escreva um comentário
-                </Label>
-                <Textarea
-                  id="new-comment"
-                  rows={3}
-                  value={newComment}
-                  onChange={(event) => setNewComment(event.target.value)}
-                  placeholder="Escreva um comentário..."
-                  className="min-h-20 resize-none"
-                />
-
-                {commentError && (
-                  <Alert variant="destructive">
-                    <AlertCircle />
-                    <AlertDescription className="whitespace-pre-line">{commentError}</AlertDescription>
-                  </Alert>
-                )}
-
-                <Button type="submit" disabled={!newComment.trim() || sendingComment}>
-                  {sendingComment ? <Loader2 className="animate-spin" /> : <Send />}
-                  {sendingComment ? "Enviando..." : "Comentar"}
-                </Button>
-              </form>
-
-              {loadingComments && (
-                <SkeletonGroup label="Carregando comentários" className="mt-6 space-y-4">
-                  {[0, 1].map((item) => (
-                    <div key={item} className="flex gap-3 rounded-xl border p-4">
-                      <Skeleton className="size-9 rounded-full" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-3 w-40" />
-                        <Skeleton className="h-4 w-3/4" />
-                      </div>
-                    </div>
-                  ))}
-                </SkeletonGroup>
-              )}
-
-              {!loadingComments && comments.length === 0 && (
-                <p className="mt-6 text-sm text-muted-foreground">
-                  Ainda não há comentários. Tire uma dúvida ou deixe um agradecimento ao autor.
+        {/* Conteúdo e comentários */}
+        <Card className="mt-6 gap-0 rounded-2xl px-6 py-7 sm:px-10 sm:py-9">
+          <section>
+            <h2 className="text-xl font-bold text-brand-ink">Conteúdo</h2>
+            <div className="mt-3 max-w-[70ch] space-y-3">
+              {paragraphs.map((paragraph, index) => (
+                <p key={index} className="text-base leading-7 text-foreground/80">
+                  {paragraph}
                 </p>
-              )}
+              ))}
+            </div>
+          </section>
 
-              <ul className="mt-6 space-y-4">
-                {comments.map((comment) => (
-                  <li key={comment.id} className="flex gap-3 rounded-xl border bg-card p-4">
-                    <UserAvatar
-                      avatarUrl={comment.authorAvatarUrl}
-                      name={comment.createdBy}
-                      className="size-9 text-xs"
-                      fallbackClassName="bg-accent text-accent-foreground"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground">
-                        <span className="font-semibold text-foreground">{comment.createdBy}</span>
-                        {" · "}
-                        {formatDate(comment.createdAt)}
-                      </p>
-                      <p className="mt-1 whitespace-pre-line text-sm leading-6 text-foreground/80">{comment.body}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </Card>
+          <Separator className="my-8" />
 
-          {/* Lateral */}
-          <aside className="h-fit space-y-5 lg:sticky lg:top-24">
-            <Card className="gap-0 rounded-2xl p-5">
-              <h3 className="text-sm font-bold text-brand-ink">Informações</h3>
-              <dl className="mt-5 space-y-4 text-sm">
-                <Info label="Categoria" value={data.subject} />
-                <Info label="Autor" value={data.createdBy} />
-                <Info label="Quantidade" value={filesLabel} />
-                <Info label="Publicado" value={publishedAt} />
-              </dl>
-            </Card>
-
-            <Card className="gap-0 rounded-2xl p-5">
-              <h3 className="text-sm font-bold text-brand-ink">Arquivos</h3>
-              <div className="mt-3 space-y-1">
-                {loadingFiles && (
-                  <SkeletonGroup label="Carregando arquivos" className="px-2 py-1">
-                    <Skeleton className="h-4 w-40" />
-                  </SkeletonGroup>
-                )}
-
-                {!loadingFiles && files.length === 0 && <p className="px-2 text-xs text-muted-foreground">Nenhum arquivo anexado.</p>}
-
-                {files.map((file) => (
-                  <Button
-                    key={file.id}
-                    variant="ghost"
-                    onClick={() => handleDownload(file)}
-                    disabled={downloading !== null}
-                    aria-label={`Baixar ${file.name}`}
-                    className="h-9 w-full justify-start px-2 text-xs font-normal text-muted-foreground hover:text-primary"
-                  >
-                    {downloading === file.id ? <Loader2 className="animate-spin" /> : <Download />}
-                    <span className="truncate">{downloading === file.id ? "Baixando..." : file.name}</span>
-                  </Button>
-                ))}
-              </div>
-            </Card>
-          </aside>
-        </div>
+          <Comments materialId={data.id} />
+        </Card>
       </div>
     </main>
   );
 }
 
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-1 font-semibold">{value}</dd>
-    </div>
-  );
+// Tipo pela extensão e tamanho legível (a API manda os bytes como texto), ex.: "PDF · 1,2 MB"
+function fileDetails(file: MaterialFile) {
+  const extension = file.name.includes(".") ? file.name.split(".").pop()!.toUpperCase() : null;
+  const bytes = Number(file.size);
+  const size =
+    file.size && Number.isFinite(bytes)
+      ? bytes < 1024 * 1024
+        ? `${Math.max(1, Math.round(bytes / 1024))} KB`
+        : `${(bytes / (1024 * 1024)).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB`
+      : file.size;
+  return [extension, size].filter(Boolean).join(" · ") || "Arquivo";
 }

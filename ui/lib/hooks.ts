@@ -27,4 +27,26 @@ export const ACCEPTED_FILES_HINT = "PDF, Word, PowerPoint, Excel, TXT, imagem ou
 export const MAX_FILE_BYTES = 10 * 1024 * 1024; // spring.servlet.multipart.max-file-size da API
 
 // Disciplinas oferecidas ao publicar e editar um material
-export const SUBJECTS = ["Direito", "Tecnologia", "Administração", "Engenharia", "Outros"];
+// Disciplinas oferecidas ao publicar/editar (a API aceita texto livre); "Outros" fica por último
+export const SUBJECTS = [
+  "Administração",
+  "Arquitetura",
+  "Biologia",
+  "Contabilidade",
+  "Direito",
+  "Economia",
+  "Educação",
+  "Enfermagem",
+  "Engenharia",
+  "Filosofia",
+  "Física",
+  "História",
+  "Letras",
+  "Matemática",
+  "Medicina",
+  "Psicologia",
+  "Química",
+  "Sociologia",
+  "Tecnologia",
+  "Outros",
+];

@@ -40,3 +40,8 @@ export async function downloadFile(file: MaterialFile) {
 
   URL.revokeObjectURL(url);
 }
+
+// Desanexa (exclusão lógica) um arquivo do material; só o dono ou moderação
+export function setFileActive(id: number, isActive: boolean): Promise<MaterialFile> {
+  return apiFetch<MaterialFile>(`/v1/api/files/${id}/activation`, { method: "PATCH", body: JSON.stringify({ isActive }) });
+}

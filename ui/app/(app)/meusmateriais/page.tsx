@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
-import { Clock3, Download, FileText, Folder, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { Download, FileText, Folder, MoreVertical, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,46 +14,43 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import LinkProgress from "@/components/link-progress";
-import { Skeleton, SkeletonGroup } from "@/components/skeleton";
-import SubjectCover from "@/components/subject-cover";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import MaterialCard, { MaterialCardSkeleton } from "@/components/material-card";
+import { SkeletonGroup } from "@/components/skeleton";
 import { toast } from "@/components/toast";
 import { downloadFile, listFiles } from "@/lib/api/files";
-import { setMaterialActive, type Material as ApiMaterial } from "@/lib/api/materials";
+import { setMaterialActive, type Material } from "@/lib/api/materials";
 import { invalidateMaterials, keys, useMyMaterials } from "@/lib/api/swr";
 import { requestPublishModal } from "@/lib/hooks";
 
-type Material = {
-  id: number;
-  titulo: string;
-  categoria: string;
-  curso: string;
-  tempo: string;
-};
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(date));
-}
-
 const LIST_KEY = keys.myMaterials(100);
+// A partir daqui a lista ganha busca e ordenação (com poucos itens, elas só ocupariam espaço)
+const TOOLS_FROM = 7;
 
 export default function MeusMateriaisPage() {
   const router = useRouter();
   const [baixando, setBaixando] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [order, setOrder] = useState("recentes");
 
   // Dados em cache (SWR): voltar à aba mostra a lista na hora e atualiza em segundo plano
   const { data, error, isLoading: loading, mutate: retry } = useMyMaterials(100);
-  const materiais: Material[] = useMemo(
-    () =>
-      (data?.content ?? []).map((material) => ({
-        id: material.id,
-        titulo: material.title,
-        categoria: material.subject,
-        curso: material.course,
-        tempo: formatDate(material.createdAt),
-      })),
-    [data]
-  );
+  const materiais: Material[] = useMemo(() => data?.content ?? [], [data]);
+  const showTools = materiais.length >= TOOLS_FROM;
+
+  const visiveis = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase("pt-BR");
+    const result = term
+      ? materiais.filter((material) =>
+          [material.title, material.body, material.subject].some((value) => value.toLocaleLowerCase("pt-BR").includes(term))
+        )
+      : [...materiais];
+
+    if (order === "alfabetica") result.sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
+    else result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return result;
+  }, [materiais, search, order]);
 
   async function baixarMaterial(material: Material) {
     setBaixando(material.id);
@@ -86,7 +82,7 @@ export default function MeusMateriaisPage() {
     );
   }
 
-  function restoreToList(original: ApiMaterial, posicao: number) {
+  function restoreToList(original: Material, posicao: number) {
     return mutate(
       LIST_KEY,
       (page?: typeof data) => {
@@ -102,28 +98,26 @@ export default function MeusMateriaisPage() {
   // Exclusão lógica (a API só desativa), então dá para oferecer "Desfazer" em vez de pedir confirmação.
   // O card some na hora; se a API falhar, ele volta para o mesmo lugar com um aviso de erro.
   async function excluirMaterial(material: Material) {
-    const original = data?.content.find((item) => item.id === material.id);
-    const posicao = data?.content.findIndex((item) => item.id === material.id) ?? -1;
-    if (!original) return;
+    const posicao = materiais.findIndex((item) => item.id === material.id);
 
     removeFromList(material.id);
 
     try {
       await setMaterialActive(material.id, false);
     } catch (err) {
-      restoreToList(original, posicao);
+      restoreToList(material, posicao);
       toast(err instanceof Error ? err.message : "Não foi possível excluir o material.", { type: "error" });
       return;
     }
 
     invalidateMaterials();
 
-    toast(`"${material.titulo}" foi excluído.`, {
+    toast(`"${material.title}" foi excluído.`, {
       type: "success",
       action: {
         label: "Desfazer",
         onClick: async () => {
-          restoreToList(original, posicao);
+          restoreToList(material, posicao);
 
           try {
             await setMaterialActive(material.id, true);
@@ -159,19 +153,35 @@ export default function MeusMateriaisPage() {
           )}
         </div>
 
+        {showTools && (
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar nos seus materiais..."
+                aria-label="Buscar nos seus materiais"
+                className="h-10 bg-card pl-9"
+              />
+            </div>
+            <Select value={order} onValueChange={setOrder}>
+              <SelectTrigger aria-label="Ordenar materiais" className="h-10 min-w-44 bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value="recentes">Mais recentes</SelectItem>
+                <SelectItem value="alfabetica">Ordem alfabética</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {loading ? (
           <SkeletonGroup label="Carregando seus materiais" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[0, 1, 2].map((item) => (
-              <div key={item} className="overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
-                <Skeleton className="h-48 rounded-none" />
-                <div className="p-5">
-                  <Skeleton className="h-6 w-3/4" />
-                  <div className="mt-[3.25rem] flex justify-between border-t pt-4">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                </div>
-              </div>
+              <MaterialCardSkeleton key={item} variant="cover" />
             ))}
           </SkeletonGroup>
         ) : error ? (
@@ -195,79 +205,59 @@ export default function MeusMateriaisPage() {
               Publicar material
             </Button>
           </div>
+        ) : visiveis.length === 0 ? (
+          <p role="status" className="rounded-2xl border border-dashed bg-card px-6 py-12 text-center text-sm text-muted-foreground">
+            Nenhum dos seus materiais corresponde a “{search.trim()}”.
+          </p>
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {materiais.map((material) => (
-              <article
-                key={material.id}
-                className="group relative rounded-2xl bg-card shadow-sm ring-1 ring-foreground/10 transition-shadow duration-200 focus-within:ring-2 focus-within:ring-ring hover:shadow-lg"
-              >
-                <SubjectCover subject={material.categoria} className="h-48 rounded-t-2xl">
-                  <Badge className="absolute left-4 top-4 bg-card/95 text-primary shadow-sm">{material.categoria}</Badge>
-                </SubjectCover>
-
-                <div className="p-5">
-                  {/* Link "esticado": o card inteiro é clicável e navegável por teclado, sem div com onClick */}
-                  <h2 className="line-clamp-2 min-h-[56px] text-lg font-bold leading-7 text-brand-ink">
-                    <Link
-                      href={`/materiais/${material.id}`}
-                      transitionTypes={["nav-forward"]}
-                      className="outline-none after:absolute after:inset-0 after:rounded-2xl after:content-['']"
-                    >
-                      {material.titulo}
-                      <LinkProgress />
-                    </Link>
-                  </h2>
-
-                  <div className="mt-4 flex items-center justify-between gap-3 border-t pt-4 text-xs text-muted-foreground">
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <FileText className="size-4 shrink-0" />
-                      <span className="truncate">{material.curso}</span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-1.5">
-                      <Clock3 className="size-4" />
-                      {material.tempo}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Ações (DropdownMenu do shadcn/ui: clique fora, Esc, foco e animação já inclusos) */}
-                <div className="absolute right-3 top-3 z-10">
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        aria-label={`Ações de ${material.titulo}`}
-                        className="size-9 rounded-full bg-card/95 shadow-md hover:bg-card"
-                      >
-                        <MoreVertical />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuItem onSelect={() => router.push(`/materiais/${material.id}/editar`)}>
-                        <Pencil />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => baixarMaterial(material)}>
-                        <Download />
-                        Baixar arquivos
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem variant="destructive" onSelect={() => excluirMaterial(material)}>
-                        <Trash2 />
-                        Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+            {visiveis.map((material) => (
+              <div key={material.id} className="relative">
+                <MaterialCard
+                  material={material}
+                  variant="cover"
+                  className="h-full"
+                  actions={
+                    // Ações (DropdownMenu do shadcn/ui: clique fora, Esc, foco e animação já inclusos)
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          aria-label={`Ações de ${material.title}`}
+                          className="size-9 rounded-full bg-card/95 shadow-md hover:bg-card"
+                        >
+                          <MoreVertical />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem onSelect={() => router.push(`/materiais/${material.id}/editar`)}>
+                          <Pencil />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => baixarMaterial(material)}>
+                          <Download />
+                          Baixar arquivos
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onSelect={() => excluirMaterial(material)}>
+                          <Trash2 />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  }
+                />
 
                 {baixando === material.id && (
-                  <p role="status" className="absolute inset-x-0 bottom-0 rounded-b-2xl bg-primary py-1.5 text-center text-xs font-medium text-primary-foreground">
+                  <p
+                    role="status"
+                    className="absolute inset-x-0 bottom-0 rounded-b-2xl bg-primary py-1.5 text-center text-xs font-medium text-primary-foreground"
+                  >
                     Baixando...
                   </p>
                 )}
-              </article>
+              </div>
             ))}
           </div>
         )}

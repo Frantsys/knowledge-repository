@@ -40,3 +40,8 @@ export function updateComment(id: number, body: string): Promise<Comment> {
     body: JSON.stringify({ body }),
   });
 }
+
+// Exclusão lógica (só o autor ou um admin)
+export function deleteComment(id: number): Promise<void> {
+  return apiFetch<void>(`/v1/api/comments/${id}`, { method: "DELETE" });
+}

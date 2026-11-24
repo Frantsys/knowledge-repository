@@ -1,26 +1,20 @@
 "use client";
 
 import { useDeferredValue, useMemo, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowDownAZ, ArrowRight, BookOpen, CalendarDays, Filter, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowDownAZ, BookOpen, Filter, RotateCcw, Search, X } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import LinkProgress from "@/components/link-progress";
-import { Skeleton, SkeletonGroup } from "@/components/skeleton";
-import UserAvatar from "@/components/user-avatar";
+import MaterialCard, { MaterialCardSkeleton } from "@/components/material-card";
+import { SkeletonGroup } from "@/components/skeleton";
 import { type Material } from "@/lib/api/materials";
 import { useMaterials } from "@/lib/api/swr";
 import { cn } from "@/lib/utils";
 
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(date));
-}
 
 export default function ExplorarPage() {
   // Termo vindo da busca da tela inicial (/explorar?q=...)
@@ -28,9 +22,9 @@ export default function ExplorarPage() {
   const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
   // Filtra enquanto digita: a lista é local, então a resposta é imediata; o valor adiado mantém o campo fluido
   const query = useDeferredValue(search).trim();
-  const [selectedSubject, setSelectedSubject] = useState("Todas");
+  // ?disciplina= vem dos atalhos de disciplina do Início
+  const [selectedSubject, setSelectedSubject] = useState(() => searchParams.get("disciplina") ?? "Todas");
   const [order, setOrder] = useState("recentes");
-  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // shortcut: busca/filtro no cliente sobre os 100 mais recentes; criar busca no servidor quando houver muitos materiais
   const { data, error: loadError, isLoading: loading, mutate: retry } = useMaterials(100);
@@ -63,8 +57,6 @@ export default function ExplorarPage() {
     return result;
   }, [materials, query, selectedSubject, order]);
 
-  const activeFiltersCount = Number(selectedSubject !== "Todas") + Number(order !== "recentes");
-
   // Mantém ?q= na URL (para voltar ou compartilhar a busca) sem navegar nem recarregar
   function updateSearch(value: string) {
     setSearch(value);
@@ -88,13 +80,13 @@ export default function ExplorarPage() {
     <div className="min-h-[calc(100dvh-4rem)] bg-background">
       <main className="page-container pt-8 pb-16 lg:pt-10">
         {/* Busca */}
-        <section className="relative mb-7 overflow-hidden rounded-2xl bg-gradient-to-r from-[#250080] via-purple-700 to-indigo-600 px-5 py-7 text-white shadow-sm sm:px-8 sm:py-9">
+        <section className="relative mb-5 overflow-hidden rounded-2xl bg-gradient-to-r from-[#250080] via-purple-700 to-indigo-600 px-4 py-5 text-white shadow-sm sm:mb-7 sm:px-8 sm:py-9">
           <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-20 h-56 w-56 rounded-full border border-white/10" />
           <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 right-1/4 h-64 w-64 rounded-full bg-white/5" />
 
           <div className="relative max-w-2xl">
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Explore novos conhecimentos</h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-white/80 sm:text-base">
+            <h1 className="text-xl font-bold tracking-tight sm:text-3xl">Explore novos conhecimentos</h1>
+            <p className="mt-2 hidden max-w-xl text-sm leading-6 text-white/80 sm:block sm:text-base">
               Encontre resumos, anotações e conteúdos compartilhados por estudantes para apoiar sua jornada acadêmica.
             </p>
           </div>
@@ -102,7 +94,7 @@ export default function ExplorarPage() {
           <form
             onSubmit={handleSearch}
             role="search"
-            className="relative mt-6 flex max-w-3xl flex-col gap-2 rounded-xl bg-card p-2 text-card-foreground shadow-lg sm:flex-row"
+            className="relative mt-4 flex max-w-3xl gap-2 rounded-xl bg-card p-1 text-card-foreground shadow-lg sm:mt-6 sm:p-2"
           >
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-primary" />
@@ -115,7 +107,7 @@ export default function ExplorarPage() {
                 className="h-10 border-0 bg-transparent pl-10 shadow-none focus-visible:ring-0 dark:bg-transparent"
               />
             </div>
-            <Button type="submit" size="lg" className="h-10 px-5 font-semibold">
+            <Button type="submit" size="lg" className="hidden h-10 px-5 font-semibold sm:inline-flex">
               <Search />
               Buscar materiais
             </Button>
@@ -123,19 +115,35 @@ export default function ExplorarPage() {
         </section>
 
         {/* Barra: filtros (celular) e ordenação */}
-        <div className="mb-5 flex items-center justify-between gap-3 lg:justify-end">
-          <Button
-            variant="outline"
-            onClick={() => setFiltersOpen(true)}
-            aria-controls="explorar-filtros"
-            aria-expanded={filtersOpen}
-            className="h-10 lg:hidden"
+        {/* Disciplinas em chips (celular e tablet): um toque filtra, sem abrir painel */}
+        {subjects.length > 1 && (
+          <div
+            role="radiogroup"
+            aria-label="Filtrar por disciplina"
+            className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:hidden [&::-webkit-scrollbar]:hidden"
           >
-            <SlidersHorizontal />
-            Filtros
-            {activeFiltersCount > 0 && <Badge className="ml-0.5 h-5 min-w-5 px-1.5">{activeFiltersCount}</Badge>}
-          </Button>
+            {subjects.map((subject) => {
+              const active = selectedSubject === subject;
+              return (
+                <button
+                  key={subject}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setSelectedSubject(subject)}
+                  className={cn(
+                    "h-10 shrink-0 rounded-full border px-4 text-sm font-medium transition-colors",
+                    active ? "border-primary bg-primary text-primary-foreground" : "bg-card text-foreground/80 hover:border-primary/40"
+                  )}
+                >
+                  {subject}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
+        <div className="mb-5 flex items-center justify-end gap-3">
           <div className="flex items-center gap-2">
             <Label htmlFor="ordenar" className="hidden text-sm font-normal text-muted-foreground sm:flex">
               <ArrowDownAZ className="size-4 text-primary" />
@@ -155,10 +163,7 @@ export default function ExplorarPage() {
 
         <div className="grid items-start gap-5 lg:grid-cols-[250px_minmax(0,1fr)]">
           {/* Filtros */}
-          <Card
-            id="explorar-filtros"
-            className={cn("gap-0 rounded-2xl p-5 lg:sticky lg:top-5 lg:flex", filtersOpen ? "flex" : "hidden")}
-          >
+          <Card id="explorar-filtros" className="hidden gap-0 rounded-2xl p-5 lg:sticky lg:top-5 lg:flex">
             <div className="mb-5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="flex size-9 items-center justify-center rounded-lg bg-accent text-accent-foreground">
@@ -169,9 +174,6 @@ export default function ExplorarPage() {
                   <p className="text-xs text-muted-foreground">Refine sua busca</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon-sm" onClick={() => setFiltersOpen(false)} aria-label="Fechar filtros" className="lg:hidden">
-                <X />
-              </Button>
             </div>
 
             <div className="space-y-5">
@@ -230,22 +232,7 @@ export default function ExplorarPage() {
             {loading ? (
               <SkeletonGroup label="Carregando materiais" className="grid gap-4 md:grid-cols-2">
                 {[0, 1, 2, 3].map((item) => (
-                  <div key={item} className="flex min-h-[255px] flex-col rounded-2xl border bg-card p-5">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="size-11 rounded-xl" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-5 w-20" />
-                        <Skeleton className="h-3 w-28" />
-                      </div>
-                    </div>
-                    <Skeleton className="mt-5 h-5 w-3/4" />
-                    <Skeleton className="mt-3 h-4 w-full" />
-                    <Skeleton className="mt-2 h-4 w-2/3" />
-                    <div className="mt-auto flex items-center gap-2.5 border-t pt-4">
-                      <Skeleton className="size-8 rounded-full" />
-                      <Skeleton className="h-4 w-32" />
-                    </div>
-                  </div>
+                  <MaterialCardSkeleton key={item} />
                 ))}
               </SkeletonGroup>
             ) : loadError ? (
@@ -259,50 +246,7 @@ export default function ExplorarPage() {
             ) : filteredMaterials.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {filteredMaterials.map((material) => (
-                  <Link
-                    key={material.id}
-                    href={`/materiais/${material.id}`}
-                    transitionTypes={["nav-forward"]}
-                    className="group flex min-h-[255px] flex-col rounded-2xl border bg-card p-5 text-card-foreground shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-primary/40 hover:shadow-md"
-                  >
-                    <div className="mb-4 flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                          <BookOpen className="size-5" />
-                        </span>
-                        <div className="min-w-0">
-                          <Badge variant="secondary" className="max-w-full bg-accent text-accent-foreground">
-                            <span className="truncate">{material.subject}</span>
-                          </Badge>
-                          <p className="mt-1 truncate text-xs text-muted-foreground">{material.course}</p>
-                        </div>
-                      </div>
-                      <ArrowRight className="mt-1 size-[18px] shrink-0 text-muted-foreground/60 transition group-hover:translate-x-0.5 group-hover:text-primary" />
-                    </div>
-
-                    <h3 className="mb-2 line-clamp-2 text-base font-bold leading-snug">{material.title}</h3>
-                    <p className="mb-5 line-clamp-3 flex-1 text-sm leading-6 text-muted-foreground">{material.body}</p>
-
-                    <div className="mt-auto flex items-end justify-between gap-3 border-t pt-4">
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <UserAvatar
-                          avatarUrl={material.user?.avatarUrl}
-                          name={material.createdBy}
-                          className="size-8 text-xs"
-                          fallbackClassName="bg-accent text-accent-foreground"
-                        />
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Compartilhado por</p>
-                          <p className="mt-0.5 truncate text-xs font-semibold">{material.createdBy}</p>
-                        </div>
-                      </div>
-                      <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
-                        <CalendarDays className="size-3.5" />
-                        {formatDate(material.createdAt)}
-                      </span>
-                    </div>
-                    <LinkProgress />
-                  </Link>
+                  <MaterialCard key={material.id} material={material} />
                 ))}
               </div>
             ) : (

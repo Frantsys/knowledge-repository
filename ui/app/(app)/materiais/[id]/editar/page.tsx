@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { mutate } from "swr";
-import { AlertCircle, ArrowLeft, FileText, Loader2, Save, Upload, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, FileText, Loader2, Save, Trash2, Undo2, Upload, X } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { toast } from "@/components/toast";
 import { updateMaterial } from "@/lib/api/materials";
-import { uploadFile } from "@/lib/api/files";
+import { setFileActive, uploadFile } from "@/lib/api/files";
 import { invalidateMaterials, keys, useFiles, useMaterial } from "@/lib/api/swr";
 import { ACCEPTED_FILES, ACCEPTED_FILES_HINT, MAX_FILE_BYTES, SUBJECTS, useEscapeKey } from "@/lib/hooks";
 import EditSkeleton from "./edit-skeleton";
@@ -27,7 +28,7 @@ export default function EditarMaterialPage() {
   // Vindo da página do material, os dados já estão em cache (SWR): o formulário abre sem esqueleto
   const { data: material, isLoading: loading } = useMaterial(id);
   const { data: filesPage } = useFiles(id);
-  const currentFileName = filesPage?.content[0]?.name ?? null;
+  const currentFiles = filesPage?.content ?? [];
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +36,8 @@ export default function EditarMaterialPage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  // Arquivos marcados para sair: só são desanexados ao salvar (Cancelar desfaz tudo)
+  const [removedIds, setRemovedIds] = useState<number[]>([]);
 
   // Esc sai da edição sem salvar (mesmo efeito do botão Cancelar)
   useEscapeKey(!saving, () => router.push(`/materiais/${id}`));
@@ -90,10 +93,15 @@ export default function EditarMaterialPage() {
         course: material!.course,
       });
 
+      for (const removedId of removedIds) {
+        await setFileActive(removedId, false);
+      }
+
       if (file) {
         await uploadFile(id, file);
-        mutate(keys.files(id));
       }
+
+      if (file || removedIds.length > 0) mutate(keys.files(id));
 
       // Página do material e listas mostram o título, a descrição e a disciplina novos
       await invalidateMaterials();
@@ -151,7 +159,7 @@ export default function EditarMaterialPage() {
                     <SelectValue placeholder="Selecione uma disciplina" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SUBJECTS.map((item) => (
+                    {(SUBJECTS.includes(category) || !category ? SUBJECTS : [...SUBJECTS, category]).map((item) => (
                       <SelectItem key={item} value={item}>
                         {item}
                       </SelectItem>
@@ -161,15 +169,34 @@ export default function EditarMaterialPage() {
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm font-medium">Arquivo</p>
+                <p className="text-sm font-medium">Arquivos</p>
 
-                <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-3 py-2.5">
-                  <FileText className="size-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{file?.name ?? currentFileName ?? "Nenhum arquivo anexado"}</p>
-                    {!file && currentFileName && <p className="text-xs text-muted-foreground">Arquivo atual</p>}
-                  </div>
-                </div>
+                {currentFiles.length === 0 && !file && <p className="text-sm text-muted-foreground">Nenhum arquivo anexado.</p>}
+
+                {currentFiles.map((current) => {
+                  const removed = removedIds.includes(current.id);
+                  return (
+                    <div key={current.id} className="flex items-center gap-3 rounded-lg border bg-muted/50 px-3 py-2">
+                      <FileText className="size-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <p className={cn("truncate text-sm font-medium", removed && "text-muted-foreground line-through")}>{current.name}</p>
+                        <p className="text-xs text-muted-foreground">{removed ? "Será removido ao salvar" : "Arquivo atual"}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setRemovedIds((ids) => (removed ? ids.filter((removedId) => removedId !== current.id) : [...ids, current.id]))
+                        }
+                        className={cn("text-muted-foreground", !removed && "hover:text-destructive")}
+                      >
+                        {removed ? <Undo2 /> : <Trash2 />}
+                        {removed ? "Manter" : "Remover"}
+                      </Button>
+                    </div>
+                  );
+                })}
 
                 <label
                   htmlFor="material-file"
@@ -178,8 +205,10 @@ export default function EditarMaterialPage() {
                   <span className="mb-2 flex size-10 items-center justify-center rounded-full bg-accent text-accent-foreground">
                     <Upload className="size-5" />
                   </span>
-                  {/* O upload adiciona um arquivo novo; o atual continua anexado */}
-                  <span className="text-sm font-medium">{file ? file.name : "Clique para adicionar outro arquivo"}</span>
+                  {/* O upload adiciona um arquivo novo; os atuais continuam, a menos que sejam removidos acima */}
+                  <span className="text-sm font-medium">
+                    {file ? file.name : currentFiles.length > 0 ? "Clique para adicionar outro arquivo" : "Clique para anexar um arquivo"}
+                  </span>
                   <span className="mt-1 text-xs text-muted-foreground">{ACCEPTED_FILES_HINT}</span>
                   <input
                     id="material-file"

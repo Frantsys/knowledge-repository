@@ -1,874 +1,233 @@
 "use client";
 
 import Link from "next/link";
-import LinkProgress from "@/components/link-progress";
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight, Plus, Search } from "lucide-react";
 
-import {
-    ArrowRight,
-    BookOpen,
-    FileText,
-    Search,
-    Upload,
-    Compass,
-    FolderOpen,
-    Clock3,
-    Plus,
-} from "lucide-react";
-
-import { type Material } from "@/lib/api/materials";
-import { useMaterials, useMe, useMyMaterials } from "@/lib/api/swr";
-import SubjectCover from "@/components/subject-cover";
-import UserAvatar from "@/components/user-avatar";
-import { Skeleton } from "@/components/skeleton";
-import { Badge } from "@/components/ui/badge";
+import LinkProgress from "@/components/link-progress";
+import MaterialCard, { MaterialCardSkeleton } from "@/components/material-card";
+import { SkeletonGroup } from "@/components/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { type Material } from "@/lib/api/materials";
+import { useMaterials, useMe, useMyMaterials } from "@/lib/api/swr";
 import { requestPublishModal } from "@/lib/hooks";
+import { cn } from "@/lib/utils";
 
-function formatDate(date: string) {
-    return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(date));
+// Mesma regra de busca do Explorar: título, descrição, disciplina, curso ou autor
+function matches(material: Material, term: string) {
+  return [material.title, material.body, material.subject, material.course, material.createdBy].some((value) =>
+    value.toLocaleLowerCase("pt-BR").includes(term)
+  );
+}
+
+function SectionHeader({ title, subtitle, href, linkLabel }: { title: string; subtitle: string; href: string; linkLabel: string }) {
+  return (
+    <div className="mb-5 flex items-end justify-between gap-4">
+      <div>
+        <h2 className="text-lg font-bold text-brand-ink sm:text-xl">{title}</h2>
+        <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{subtitle}</p>
+      </div>
+      <Link
+        href={href}
+        transitionTypes={["nav-forward"]}
+        className="flex min-h-11 shrink-0 items-center gap-1 text-sm font-medium text-primary hover:text-primary/80"
+      >
+        {linkLabel}
+        <ArrowRight className="size-4" />
+        <LinkProgress />
+      </Link>
+    </div>
+  );
 }
 
 export default function HomePage() {
-    const [query, setQuery] = useState("");
-    const router = useRouter();
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
 
-    // Dados em cache (SWR): voltar ao Início mostra o que já foi carregado e atualiza em segundo plano
-    const { data: me } = useMe();
-    const { data: myPage, isLoading: loadingMine } = useMyMaterials(3);
-    const { data: recentPage, isLoading: loadingRecent } = useMaterials(8);
+  // Dados em cache (SWR): voltar ao Início mostra o que já foi carregado e atualiza em segundo plano.
+  // A lista de 100 é a mesma do Explorar: as sugestões da busca já deixam o Explorar pronto
+  const { data: me } = useMe();
+  const { data: myPage, isLoading: loadingMine } = useMyMaterials(3);
+  const { data: allPage, isLoading: loadingAll } = useMaterials(100);
 
-    const nome = me?.firstName ?? "";
-    const meusMateriais: Material[] = myPage?.content ?? [];
-    const recentes: Material[] = (recentPage?.content ?? []).filter((material) => material.isActive).slice(0, 4);
+  const all = useMemo(() => (allPage?.content ?? []).filter((material) => material.isActive), [allPage]);
+  const mine = myPage?.content ?? [];
+  const recent = all.slice(0, 4);
 
-    // A busca acontece no Explorar: leva o termo pela URL (?q=)
-    function handleSearch(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        const term = query.trim();
-        router.push(term ? `/explorar?q=${encodeURIComponent(term)}` : "/explorar");
-    }
+  // Disciplinas com materiais publicados, da mais usada para a menos usada
+  const subjects = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const material of all) counts.set(material.subject, (counts.get(material.subject) ?? 0) + 1);
+    return [...counts].sort((a, b) => b[1] - a[1]);
+  }, [all]);
 
-    const materiaisAcessados = meusMateriais.map((material) => ({
-        id: material.id,
-        title: material.title,
-        category: material.subject,
-        accessed: formatDate(material.createdAt),
-    }));
+  const term = query.trim().toLocaleLowerCase("pt-BR");
+  const suggestions = term ? all.filter((material) => matches(material, term)).slice(0, 5) : [];
+  const showSuggestions = searchFocused && term.length > 0;
 
-    const novosMateriais = recentes.map((material) => ({
-        id: material.id,
-        author: material.createdBy,
-        authorAvatarUrl: material.user?.avatarUrl ?? null,
-        course: material.course,
-        title: material.title,
-        description: material.body,
-        type: material.subject,
-        time: formatDate(material.createdAt),
-    }));
+  // Enter leva para o Explorar com o termo (lá a lista continua filtrando enquanto digita)
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const value = query.trim();
+    router.push(value ? `/explorar?q=${encodeURIComponent(value)}` : "/explorar");
+  }
 
-    return (
-        <div className="min-h-[calc(100dvh-4rem)] bg-background">
+  return (
+    <div className="min-h-[calc(100dvh-4rem)] bg-background">
+      <main className="page-container pt-8 pb-16 lg:pt-10">
+        {/* Boas-vindas e busca */}
+        <section className="mb-8">
+          <p className="mb-1 text-sm font-medium text-primary">Olá{me?.firstName && `, ${me.firstName}`}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-brand-ink sm:text-3xl">O que você quer estudar hoje?</h1>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+            Busque um material ou escolha uma disciplina para começar.
+          </p>
 
-            {/* =====================================================
-                CONTEÚDO
-            ====================================================== */}
+          <div className="relative mt-6">
+            <form
+              onSubmit={handleSearch}
+              role="search"
+              className="flex h-12 w-full items-center gap-2 rounded-xl border bg-card pl-4 pr-2 shadow-sm transition focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30"
+            >
+              <Search className="size-[19px] shrink-0 text-muted-foreground" />
+              <Input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                aria-label="Buscar materiais"
+                aria-controls="home-search-suggestions"
+                aria-expanded={showSuggestions}
+                placeholder="Buscar materiais, disciplinas ou assuntos..."
+                className="h-full min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0 dark:bg-transparent"
+              />
+              <Button type="submit" aria-label="Ver resultados no Explorar" className="h-8 px-3 text-xs">
+                <span className="hidden sm:inline">Buscar</span>
+                <ArrowRight />
+              </Button>
+            </form>
 
-            <main>
-
-                <div
-                    className="page-container pt-8 pb-16 lg:pt-10"
+            {/* Sugestões ao vivo: os 5 primeiros resultados, com atalho para a lista completa */}
+            {showSuggestions && (
+              <div
+                id="home-search-suggestions"
+                // Mantém o foco no campo ao clicar numa sugestão (o blur fecharia a lista antes do clique)
+                onMouseDown={(event) => event.preventDefault()}
+                className="absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-lg animate-in fade-in-0 slide-in-from-top-1 duration-150"
+              >
+                <p role="status" className="px-4 pt-3 pb-1 text-xs text-muted-foreground">
+                  {loadingAll ? "Buscando..." : suggestions.length === 0 ? "Nenhum material encontrado." : "Sugestões"}
+                </p>
+                <ul>
+                  {suggestions.map((material) => (
+                    <li key={material.id}>
+                      <Link
+                        href={`/materiais/${material.id}`}
+                        transitionTypes={["nav-forward"]}
+                        className="flex min-h-11 items-center justify-between gap-3 px-4 py-2 text-sm hover:bg-muted focus-visible:bg-muted"
+                      >
+                        <span className="truncate font-medium">{material.title}</span>
+                        <span className="shrink-0 text-xs text-muted-foreground">{material.subject}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href={`/explorar?q=${encodeURIComponent(query.trim())}`}
+                  transitionTypes={["nav-forward"]}
+                  className="flex min-h-11 items-center gap-1.5 border-t px-4 text-sm font-medium text-primary hover:bg-muted"
                 >
-
-                    {/* =================================================
-                        BOAS-VINDAS
-                    ================================================== */}
-
-                    <section className="mb-8">
-
-                        <div
-                            className="
-                                flex
-                                flex-col
-                                gap-5
-                                lg:flex-row
-                                lg:items-end
-                                lg:justify-between
-                            "
-                        >
-
-                            <div>
-
-                                <p
-                                    className="
-                                        mb-1
-                                        text-sm
-                                        font-medium
-                                        text-primary
-                                    "
-                                >
-                                    Olá{nome && `, ${nome}`} 
-                                </p>
-
-                                <h1
-                                    className="
-                                        text-2xl
-                                        font-bold
-                                        tracking-tight
-                                        text-brand-ink
-                                        sm:text-3xl
-                                    "
-                                >
-                                    O que você quer estudar hoje?
-                                </h1>
-
-                                <p
-                                    className="
-                                        mt-2
-                                        max-w-xl
-                                        text-sm
-                                        leading-relaxed
-                                        text-muted-foreground
-                                    "
-                                >
-                                    Encontre materiais para continuar seus
-                                    estudos ou compartilhe algo com a comunidade.
-                                </p>
-
-                            </div>
-
-                        </div>
-
-
-                        {/* =================================================
-                            BUSCA
-                        ================================================== */}
-
-                        <div className="mt-6">
-
-                            <form
-                                onSubmit={handleSearch}
-                                role="search"
-                                className="flex h-12 w-full items-center gap-2 rounded-xl border bg-card pl-4 pr-2 shadow-sm transition focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30"
-                            >
-                                <Search className="size-[19px] shrink-0 text-muted-foreground" />
-                                <Input
-                                    type="search"
-                                    value={query}
-                                    onChange={(event) => setQuery(event.target.value)}
-                                    aria-label="Buscar materiais"
-                                    placeholder="Buscar materiais, disciplinas ou assuntos..."
-                                    className="h-full min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0 dark:bg-transparent"
-                                />
-                                <Button type="submit" aria-label="Buscar" className="h-8 px-3 text-xs">
-                                    <span className="hidden sm:inline">Buscar</span>
-                                    <ArrowRight />
-                                </Button>
-                            </form>
-
-                        </div>
-
-                    </section>
-
-
-                    {/* =================================================
-                        ACESSO RÁPIDO
-                    ================================================== */}
-
-                    <section className="mb-10">
-
-                        <div className="mb-4">
-
-                            <h2
-                                className="
-                                    text-base
-                                    font-bold
-                                    text-brand-ink
-                                    sm:text-lg
-                                "
-                            >
-                                Acesso rápido
-                            </h2>
-
-                        </div>
-
-
-                        <div
-                            className="
-                                grid
-                                grid-cols-1
-                                gap-3
-                                sm:grid-cols-2
-                                lg:grid-cols-2
-                            "
-                        >
-
-                            {/* Explorar */}
-
-                            <Link
-                                href="/explorar"
-                                transitionTypes={["nav-forward"]}
-                                className="
-                                    group
-                                    flex
-                                    items-center
-                                    gap-4
-                                    rounded-xl
-                                    border
-                                    border-border
-                                    bg-card
-                                    p-4
-                                    shadow-sm
-                                    transition
-                                    hover:border-primary/40
-                                    hover:shadow-md
-                                "
-                            >
-
-                                <div
-                                    className="
-                                        flex
-                                        h-10
-                                        w-10
-                                        shrink-0
-                                        items-center
-                                        justify-center
-                                        rounded-lg
-                                        bg-accent
-                                        text-primary
-                                        transition
-                                        group-hover:bg-accent
-                                    "
-                                >
-                                    <Compass size={20} />
-                                </div>
-
-                                <div className="min-w-0">
-
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Explorar materiais
-                                    </p>
-
-                                    <p className="mt-0.5 text-xs text-muted-foreground">
-                                        Encontre novos conteúdos
-                                    </p>
-
-                                </div>
-
-                                <ArrowRight
-                                    size={16}
-                                    className="
-                                        ml-auto
-                                        shrink-0
-                                        text-muted-foreground/70
-                                        transition
-                                        group-hover:translate-x-0.5
-                                        group-hover:text-primary/80
-                                    "
-                                />
-
-                              <LinkProgress />
-                            </Link>
-
-
-                            {/* Meus materiais */}
-
-                            <Link
-                                href="/meusmateriais"
-                                transitionTypes={["nav-forward"]}
-                                className="
-                                    group
-                                    flex
-                                    items-center
-                                    gap-4
-                                    rounded-xl
-                                    border
-                                    border-border
-                                    bg-card
-                                    p-4
-                                    shadow-sm
-                                    transition
-                                    hover:border-primary/40
-                                    hover:shadow-md
-                                "
-                            >
-
-                                <div
-                                    className="
-                                        flex
-                                        h-10
-                                        w-10
-                                        shrink-0
-                                        items-center
-                                        justify-center
-                                        rounded-lg
-                                        bg-accent
-                                        text-primary
-                                        transition
-                                        group-hover:bg-accent
-                                    "
-                                >
-                                    <FolderOpen size={20} />
-                                </div>
-
-                                <div className="min-w-0">
-
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Meus materiais
-                                    </p>
-
-                                    <p className="mt-0.5 text-xs text-muted-foreground">
-                                        Acesse seus conteúdos salvos
-                                    </p>
-
-                                </div>
-
-                                <ArrowRight
-                                    size={16}
-                                    className="
-                                        ml-auto
-                                        shrink-0
-                                        text-muted-foreground/70
-                                        transition
-                                        group-hover:translate-x-0.5
-                                        group-hover:text-primary/80
-                                    "
-                                />
-
-                              <LinkProgress />
-                            </Link>
-
-                        </div>
-
-                    </section>
-
-
-                    {/* =================================================
-                        ÚLTIMOS MATERIAIS ACESSADOS
-                    ================================================== */}
-
-                    <section>
-
-                        {/* Cabeçalho */}
-
-                        <div className="mb-5 flex items-center justify-between">
-
-                            <div>
-
-                                <h2
-                                    className="
-                                        text-lg
-                                        font-bold
-                                        text-brand-ink
-                                        sm:text-xl
-                                    "
-                                >
-                                    Continue estudando
-                                </h2>
-
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    Seus materiais publicados recentemente
-                                </p>
-
-                            </div>
-
-
-                            <Link
-                                href="/meusmateriais"
-                                transitionTypes={["nav-forward"]}
-                                className="
-                                    hidden
-                                    items-center
-                                    gap-1
-                                    text-xs
-                                    font-medium
-                                    text-primary
-                                    transition
-                                    hover:text-primary/80
-                                    sm:flex
-                                "
-                            >
-                                Ver todos
-                                <ArrowRight size={14} />
-                              <LinkProgress />
-                            </Link>
-
-                        </div>
-
-
-                        {/* Cards */}
-
-                        <div
-                            className="
-                                grid
-                                grid-cols-1
-                                gap-5
-                                sm:grid-cols-2
-                                lg:grid-cols-3
-                            "
-                        >
-
-                            {/* Esqueletos com a mesma estrutura do card real (capa 160px + linha de título e data) */}
-                            {loadingMine && [0, 1, 2].map((item) => (
-                                <div
-                                    key={item}
-                                    role={item === 0 ? "status" : undefined}
-                                    aria-label={item === 0 ? "Carregando seus materiais" : undefined}
-                                    className="skeleton-delayed overflow-hidden rounded-xl border border-border bg-card"
-                                >
-                                    <Skeleton className="h-[160px] rounded-none" />
-                                    <div className="flex items-start gap-3 p-4">
-                                        <Skeleton className="h-9 w-9 rounded-lg" />
-                                        <div className="flex-1 space-y-2.5 pt-0.5">
-                                            <Skeleton className="h-4 w-3/4" />
-                                            <Skeleton className="h-3 w-1/2" />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {!loadingMine && materiaisAcessados.length === 0 && (
-                                <div className="col-span-full flex flex-col items-center rounded-xl border border-dashed border-border bg-card px-6 py-10 text-center">
-                                    <p className="text-sm font-semibold text-foreground">Você ainda não publicou nenhum material</p>
-                                    <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                                        Compartilhe um resumo ou anotação; ele aparece aqui para você retomar depois.
-                                    </p>
-                                    <Button size="lg" className="mt-4 h-10" onClick={requestPublishModal}>
-                                        <Plus />
-                                        Publicar meu primeiro material
-                                    </Button>
-                                </div>
-                            )}
-
-                            {materiaisAcessados.map((material) => (
-
-                                <Link
-                                    key={material.id}
-                                    href={`/materiais/${material.id}`}
-                                    transitionTypes={["nav-forward"]}
-                                    className="
-                                        group
-                                        block
-                                        overflow-hidden
-                                        rounded-xl
-                                        border
-                                        border-border
-                                        bg-card
-                                        shadow-sm
-                                        transition
-                                        hover:border-primary/40
-                                        hover:shadow-lg
-                                    "
-                                >
-
-                                    {/* Imagem */}
-
-                                    <SubjectCover subject={material.category} className="h-[160px]">
-
-                                        {/* Categoria */}
-
-                                        <Badge className="absolute left-3 top-3 bg-card/90 text-primary shadow-sm backdrop-blur-sm">{material.category}</Badge>
-
-                                    </SubjectCover>
-
-
-                                    {/* Informações */}
-
-                                    <div className="p-4">
-
-                                        <div className="flex items-start gap-3">
-
-                                            <div
-                                                className="
-                                                    flex
-                                                    h-9
-                                                    w-9
-                                                    shrink-0
-                                                    items-center
-                                                    justify-center
-                                                    rounded-lg
-                                                    bg-accent
-                                                    text-primary
-                                                "
-                                            >
-                                                <BookOpen size={17} />
-                                            </div>
-
-                                            <div className="min-w-0 flex-1">
-
-                                                <h3
-                                                    className="
-                                                        line-clamp-2
-                                                        text-sm
-                                                        font-semibold
-                                                        leading-snug
-                                                        text-foreground
-                                                    "
-                                                >
-                                                    {material.title}
-                                                </h3>
-
-                                                <div
-                                                    className="
-                                                        mt-2
-                                                        flex
-                                                        items-center
-                                                        gap-1.5
-                                                        text-xs
-                                                        text-muted-foreground
-                                                    "
-                                                >
-                                                    <Clock3 size={12} />
-
-                                                    <span>
-                                                        Publicado em {material.accessed}
-                                                    </span>
-                                                </div>
-
-                                            </div>
-
-                                            <ArrowRight
-                                                size={16}
-                                                className="
-                                                    mt-1
-                                                    shrink-0
-                                                    text-muted-foreground/70
-                                                    transition
-                                                    group-hover:translate-x-0.5
-                                                    group-hover:text-primary/80
-                                                "
-                                            />
-
-                                        </div>
-
-                                    </div>
-
-                                  <LinkProgress />
-                                </Link>
-
-                            ))}
-
-                        </div>
-
-
-                        {/* Mobile */}
-
-                        <Link
-                            href="/meusmateriais"
-                            transitionTypes={["nav-forward"]}
-                            className="
-                                mt-4
-                                flex
-                                items-center
-                                gap-1
-                                text-xs
-                                font-medium
-                                text-primary
-                                sm:hidden
-                            "
-                        >
-                            Ver todos
-                            <ArrowRight size={14} />
-                          <LinkProgress />
-                        </Link>
-
-                    </section>
-
-
-                    {/* =================================================
-                        NOVOS MATERIAIS
-                    ================================================== */}
-
-                    <section className="mt-12 sm:mt-14">
-
-                        {/* Cabeçalho */}
-
-                        <div className="mb-5 flex items-center justify-between">
-
-                            <div>
-
-                                <h2
-                                    className="
-                                        text-lg
-                                        font-bold
-                                        text-brand-ink
-                                        sm:text-xl
-                                    "
-                                >
-                                    Novos materiais
-                                </h2>
-
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    Conteúdos publicados recentemente pela comunidade
-                                </p>
-
-                            </div>
-
-
-                            <Link
-                                href="/explorar"
-                                transitionTypes={["nav-forward"]}
-                                className="
-                                    hidden
-                                    items-center
-                                    gap-1
-                                    text-xs
-                                    font-medium
-                                    text-primary
-                                    transition
-                                    hover:text-primary/80
-                                    sm:flex
-                                "
-                            >
-                                Explorar
-                                <ArrowRight size={14} />
-                              <LinkProgress />
-                            </Link>
-
-                        </div>
-
-
-                        {/* Cards */}
-
-                        <div
-                            className="
-                                grid
-                                grid-cols-1
-                                gap-4
-                                sm:grid-cols-2
-                                lg:grid-cols-4
-                            "
-                        >
-
-                            {loadingRecent && [0, 1, 2, 3].map((item) => (
-                                <div
-                                    key={item}
-                                    role={item === 0 ? "status" : undefined}
-                                    aria-label={item === 0 ? "Carregando novos materiais" : undefined}
-                                    className="skeleton-delayed flex min-h-[220px] flex-col rounded-xl border border-border bg-card p-4"
-                                >
-                                    <div className="flex items-center gap-2.5">
-                                        <Skeleton className="h-9 w-9 rounded-full" />
-                                        <div className="space-y-1.5">
-                                            <Skeleton className="h-3 w-24" />
-                                            <Skeleton className="h-3 w-16" />
-                                        </div>
-                                    </div>
-                                    <Skeleton className="mt-5 h-5 w-20" />
-                                    <Skeleton className="mt-3 h-4 w-3/4" />
-                                    <Skeleton className="mt-2 h-3 w-full" />
-                                    <div className="mt-auto flex justify-between border-t border-border pt-3">
-                                        <Skeleton className="h-3 w-20" />
-                                        <Skeleton className="h-3 w-16" />
-                                    </div>
-                                </div>
-                            ))}
-
-                            {!loadingRecent && novosMateriais.length === 0 && (
-                                <p className="col-span-full rounded-xl border border-dashed border-input bg-card px-6 py-10 text-center text-sm text-muted-foreground">
-                                    Ainda não há materiais da comunidade. Que tal ser o primeiro a publicar?
-                                </p>
-                            )}
-
-                            {novosMateriais.map((material) => (
-
-                                <Link
-                                    key={material.id}
-                                    href={`/materiais/${material.id}`}
-                                    transitionTypes={["nav-forward"]}
-                                    className="
-                                        group
-                                        flex
-                                        min-h-[220px]
-                                        flex-col
-                                        overflow-hidden
-                                        rounded-xl
-                                        border
-                                        border-border
-                                        bg-card
-                                        shadow-sm
-                                        transition
-                                        hover:border-primary/40
-                                        hover:shadow-lg
-                                    "
-                                >
-
-                                    {/* Usuário */}
-
-                                    <div className="flex items-center gap-2.5 px-4 pt-4">
-
-                                        <UserAvatar
-                                            avatarUrl={material.authorAvatarUrl}
-                                            name={material.author}
-                                            className="h-9 w-9 rounded-full text-xs"
-                                            fallbackClassName="bg-accent text-primary"
-                                        />
-
-
-                                        <div className="min-w-0">
-
-                                            <p
-                                                className="
-                                                    truncate
-                                                    text-xs
-                                                    font-semibold
-                                                    text-foreground
-                                                "
-                                            >
-                                                {material.author}
-                                            </p>
-
-                                            <p
-                                                className="
-                                                    mt-0.5
-                                                    truncate
-                                                    text-xs
-                                                    text-muted-foreground
-                                                "
-                                            >
-                                                {material.course}
-                                            </p>
-
-                                        </div>
-
-                                    </div>
-
-
-                                    {/* Conteúdo */}
-
-                                    <div className="flex flex-1 flex-col px-4 pb-4 pt-4">
-
-                                        {/* Tipo */}
-
-                                        <div className="mb-3 flex items-center gap-2">
-
-                                            <Badge variant="secondary" className="bg-accent text-accent-foreground"><FileText />{material.type}</Badge>
-
-                                        </div>
-
-
-                                        {/* Título */}
-
-                                        <h3
-                                            className="
-                                                line-clamp-2
-                                                text-sm
-                                                font-semibold
-                                                leading-snug
-                                                text-foreground
-                                            "
-                                        >
-                                            {material.title}
-                                        </h3>
-
-
-                                        {/* Descrição */}
-
-                                        <p
-                                            className="
-                                                mt-2
-                                                line-clamp-3
-                                                flex-1
-                                                text-xs
-                                                leading-relaxed
-                                                text-muted-foreground
-                                            "
-                                        >
-                                            {material.description}
-                                        </p>
-
-
-                                        {/* Rodapé */}
-
-                                        <div
-                                            className="
-                                                mt-4
-                                                flex
-                                                items-center
-                                                justify-between
-                                                border-t
-                                                border-border
-                                                pt-3
-                                            "
-                                        >
-
-                                            <div
-                                                className="
-                                                    flex
-                                                    items-center
-                                                    gap-1.5
-                                                    text-xs
-                                                    text-muted-foreground
-                                                "
-                                            >
-                                                <Clock3 size={12} />
-                                                {material.time}
-                                            </div>
-
-                                            <span
-                                                className="
-                                                    flex
-                                                    items-center
-                                                    gap-1
-                                                    text-xs
-                                                    font-medium
-                                                    text-primary
-                                                    transition
-                                                    group-hover:text-primary/80
-                                                "
-                                            >
-                                                Ver material
-                                                <ArrowRight size={12} />
-                                            </span>
-
-                                        </div>
-
-                                    </div>
-
-                                  <LinkProgress />
-                                </Link>
-
-                            ))}
-
-                        </div>
-
-
-                        {/* Mobile */}
-
-                        <Link
-                            href="/explorar"
-                            transitionTypes={["nav-forward"]}
-                            className="
-                                mt-4
-                                flex
-                                items-center
-                                gap-1
-                                text-xs
-                                font-medium
-                                text-primary
-                                sm:hidden
-                            "
-                        >
-                            Explorar todos
-                            <ArrowRight size={14} />
-                          <LinkProgress />
-                        </Link>
-
-                    </section>
-
-
-                    {/* =================================================
-                        ESPAÇAMENTO FINAL
-                    ================================================== */}
-
-                    <div className="h-10 sm:h-14" />
-
-                </div>
-
-            </main>
-
-        </div>
-    );
+                  Ver todos os resultados para “{query.trim()}”
+                  <ArrowRight className="size-4" />
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Disciplinas: um toque abre o Explorar já filtrado */}
+          {subjects.length > 0 && (
+            <nav
+              aria-label="Disciplinas"
+              className="-mx-5 mt-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
+            >
+              {subjects.map(([subject, count]) => (
+                <Link
+                  key={subject}
+                  href={`/explorar?disciplina=${encodeURIComponent(subject)}`}
+                  transitionTypes={["nav-forward"]}
+                  className="flex h-10 shrink-0 items-center gap-2 rounded-full border bg-card px-4 text-sm font-medium text-foreground/80 transition-colors hover:border-primary/40 hover:text-primary"
+                >
+                  {subject}
+                  <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">{count}</span>
+                </Link>
+              ))}
+            </nav>
+          )}
+        </section>
+
+        {/* Materiais da própria pessoa */}
+        <section>
+          <SectionHeader title="Seus materiais" subtitle="Os últimos que você publicou" href="/meusmateriais" linkLabel="Ver todos" />
+
+          {loadingMine ? (
+            <SkeletonGroup label="Carregando seus materiais" className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((item) => (
+                <MaterialCardSkeleton key={item} variant="cover" className={cn(item > 0 && "max-sm:hidden")} />
+              ))}
+            </SkeletonGroup>
+          ) : mine.length === 0 ? (
+            <div className="flex flex-col items-center rounded-2xl border border-dashed bg-card px-6 py-10 text-center">
+              <p className="text-sm font-semibold">Você ainda não publicou nenhum material</p>
+              <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                Compartilhe um resumo ou anotação; ele aparece aqui para você acompanhar.
+              </p>
+              <Button size="lg" className="mt-4 h-10" onClick={requestPublishModal}>
+                <Plus />
+                Publicar meu primeiro material
+              </Button>
+            </div>
+          ) : (
+            // No celular: carrossel com deslize horizontal
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 max-sm:-mx-5 max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:scroll-px-5 max-sm:gap-3 max-sm:overflow-x-auto max-sm:px-5 max-sm:pb-2 max-sm:[scrollbar-width:none]">
+              {mine.map((material) => (
+                <MaterialCard key={material.id} material={material} variant="cover" className="max-sm:w-[78%] max-sm:shrink-0 max-sm:snap-start" />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Novidades da comunidade */}
+        <section className="mt-12 sm:mt-14">
+          <SectionHeader
+            title="Novos materiais"
+            subtitle="Publicados recentemente pela comunidade"
+            href="/explorar"
+            linkLabel="Explorar"
+          />
+
+          {loadingAll ? (
+            <SkeletonGroup label="Carregando novos materiais" className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {[0, 1, 2, 3].map((item) => (
+                <MaterialCardSkeleton key={item} />
+              ))}
+            </SkeletonGroup>
+          ) : recent.length === 0 ? (
+            <p className="rounded-2xl border border-dashed bg-card px-6 py-10 text-center text-sm text-muted-foreground">
+              Ainda não há materiais publicados. Que tal ser a primeira pessoa a compartilhar?
+            </p>
+          ) : (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {recent.map((material) => (
+                <MaterialCard key={material.id} material={material} />
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
+  );
 }
