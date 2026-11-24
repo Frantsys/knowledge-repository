@@ -20,6 +20,7 @@ import {
 import { listMaterials, listMyMaterials, type Material } from "@/lib/api/materials";
 import { getMe } from "@/lib/api/perfil";
 import SubjectCover from "@/components/subject-cover";
+import UserAvatar from "@/components/user-avatar";
 import { requestPublishModal } from "@/lib/hooks";
 
 function formatDate(date: string) {
@@ -61,6 +62,7 @@ export default function HomePage() {
     const novosMateriais = recentes.map((material) => ({
         id: material.id,
         author: material.createdBy,
+        authorAvatarUrl: material.user?.avatarUrl ?? null,
         course: material.course,
         title: material.title,
         description: material.body,
@@ -758,23 +760,12 @@ export default function HomePage() {
 
                                     <div className="flex items-center gap-2.5 px-4 pt-4">
 
-                                        <div
-                                            className="
-                                                flex
-                                                h-9
-                                                w-9
-                                                shrink-0
-                                                items-center
-                                                justify-center
-                                                rounded-full
-                                                bg-purple-100
-                                                text-xs
-                                                font-semibold
-                                                text-purple-700
-                                            "
-                                        >
-                                            {material.author.charAt(0).toUpperCase()}
-                                        </div>
+                                        <UserAvatar
+                                            avatarUrl={material.authorAvatarUrl}
+                                            name={material.author}
+                                            className="h-9 w-9 rounded-full text-xs"
+                                            fallbackClassName="bg-purple-100 text-purple-700"
+                                        />
 
 
                                         <div className="min-w-0">

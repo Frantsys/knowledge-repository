@@ -4,7 +4,7 @@ import { apiFetch, type Page } from "./client";
 export interface Material {
   id: number;
   userId: number;
-  user: { id: number; firstName: string; lastName: string; email: string; role: string } | null;
+  user: { id: number; firstName: string; lastName: string; email: string; role: string; avatarUrl: string | null } | null;
   title: string;
   body: string;
   subject: string;

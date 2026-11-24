@@ -5,7 +5,6 @@ import { useRouter, useParams } from "next/navigation";
 
 import {
     ArrowLeft,
-    BookOpen,
     Clock3,
     Download,
     FileText,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 
 import SubjectCover from "@/components/subject-cover";
+import UserAvatar from "@/components/user-avatar";
 import MaterialSkeleton from "./material-skeleton";
 import { toast } from "@/components/toast";
 import { getMaterial, type Material } from "@/lib/api/materials";
@@ -102,6 +102,7 @@ export default function MaterialPage() {
               paginas: `${files.length} ${files.length === 1 ? "arquivo" : "arquivos"}`,
               tempo: formatDate(data.createdAt),
               autor: data.createdBy,
+              autorFoto: data.user?.avatarUrl ?? null,
               descricao: data.course,
               conteudo: [{ titulo: "Conteúdo", paragrafos: data.body.split(/\n+/).filter(Boolean) }],
           }
@@ -341,9 +342,11 @@ export default function MaterialPage() {
                                         text-gray-600
                                     "
                                 >
-                                    <BookOpen
-                                        size={17}
-                                        className="text-purple-600"
+                                    <UserAvatar
+                                        avatarUrl={material.autorFoto}
+                                        name={material.autor}
+                                        className="h-6 w-6 rounded-full text-xs"
+                                        fallbackClassName="bg-purple-100 text-purple-700"
                                     />
 
                                     Por {material.autor}
@@ -589,15 +592,23 @@ export default function MaterialPage() {
 
                                 <ul className="mt-6 space-y-4">
                                     {comments.map((comment) => (
-                                        <li key={comment.id} className="rounded-xl border border-gray-100 bg-white p-4">
-                                            <p className="text-xs text-gray-500">
-                                                <span className="font-semibold text-gray-800">{comment.createdBy}</span>
-                                                {" · "}
-                                                {formatDate(comment.createdAt)}
-                                            </p>
-                                            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-600">
-                                                {comment.body}
-                                            </p>
+                                        <li key={comment.id} className="flex gap-3 rounded-xl border border-gray-100 bg-white p-4">
+                                            <UserAvatar
+                                                avatarUrl={comment.authorAvatarUrl}
+                                                name={comment.createdBy}
+                                                className="h-9 w-9 rounded-full text-xs"
+                                                fallbackClassName="bg-purple-100 text-purple-700"
+                                            />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-xs text-gray-500">
+                                                    <span className="font-semibold text-gray-800">{comment.createdBy}</span>
+                                                    {" · "}
+                                                    {formatDate(comment.createdAt)}
+                                                </p>
+                                                <p className="mt-1 whitespace-pre-line text-sm leading-6 text-gray-600">
+                                                    {comment.body}
+                                                </p>
+                                            </div>
                                         </li>
                                     ))}
                                 </ul>

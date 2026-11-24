@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { listMaterials, type Material } from "@/lib/api/materials";
+import UserAvatar from "@/components/user-avatar";
 
 function formatDate(date: string) {
     return new Intl.DateTimeFormat("pt-BR", {
@@ -344,13 +345,21 @@ export default function ExplorarPage() {
                                             Futuramente, vincular o autor ao perfil público
                                             usando o ID retornado pela API. */}
                                         <div className="mt-auto flex items-end justify-between gap-3 border-t border-gray-100 pt-4">
-                                            <div className="min-w-0">
+                                            <div className="flex min-w-0 items-center gap-2.5">
+                                                <UserAvatar
+                                                    avatarUrl={material.user?.avatarUrl}
+                                                    name={material.createdBy}
+                                                    className="h-8 w-8 rounded-full text-xs"
+                                                    fallbackClassName="bg-purple-100 text-purple-700"
+                                                />
+                                                <div className="min-w-0">
                                                 <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
                                                     Compartilhado por
                                                 </p>
-                                                <p className="mt-1 truncate text-xs font-semibold text-gray-700">
+                                                <p className="mt-0.5 truncate text-xs font-semibold text-gray-700">
                                                     {material.createdBy}
                                                 </p>
+                                                </div>
                                             </div>
                                             <span className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500">
                                                 <CalendarDays size={13} />

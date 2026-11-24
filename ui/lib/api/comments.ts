@@ -10,6 +10,8 @@ export interface Comment {
   likes: number;
   updatedAt: string | null;
   createdBy: string;
+  // Foto do autor; null quando ele não tem foto
+  authorAvatarUrl: string | null;
   createdAt: string;
   isActive: boolean;
 }

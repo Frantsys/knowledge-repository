@@ -488,7 +488,7 @@ export default function Navbar() {
               >
                 {/* Avatar */}
 
-                <UserAvatar user={me} className="h-7 w-7 rounded-full text-xs" />
+                <UserAvatar avatarUrl={me?.avatarUrl} name={me?.firstName ?? ""} className="h-7 w-7 rounded-full text-xs" />
 
                 <span className="hidden text-xs font-medium lg:inline">
                   {userName}
@@ -566,7 +566,7 @@ export default function Navbar() {
                         hover:bg-purple-50
                       "
                     >
-                      <UserAvatar user={me} className="h-9 w-9 rounded-full text-sm" />
+                      <UserAvatar avatarUrl={me?.avatarUrl} name={me?.firstName ?? ""} className="h-9 w-9 rounded-full text-sm" />
 
                       <div className="min-w-0">
                         <p className="truncate text-xs font-semibold text-gray-900">
@@ -845,7 +845,7 @@ export default function Navbar() {
                     hover:bg-gray-50
                   "
                 >
-                  <UserAvatar user={me} className="h-9 w-9 rounded-full text-sm" />
+                  <UserAvatar avatarUrl={me?.avatarUrl} name={me?.firstName ?? ""} className="h-9 w-9 rounded-full text-sm" />
 
                   <div>
                     <p className="text-sm font-medium text-gray-800">
