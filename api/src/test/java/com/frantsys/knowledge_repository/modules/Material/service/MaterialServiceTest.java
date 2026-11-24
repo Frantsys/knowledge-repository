@@ -60,6 +60,7 @@ class MaterialServiceTest {
         existingMaterial.setBody("Old body");
         existingMaterial.setSubject("Old subject");
         existingMaterial.setCourse("Old course");
+        existingMaterial.setIsActive(true);
     }
 
     @Test
@@ -112,6 +113,15 @@ class MaterialServiceTest {
     }
 
     @Test
+    @DisplayName("findById should treat a deactivated material as not found")
+    void findById_shouldThrowExceptionWhenInactive() {
+        existingMaterial.setIsActive(false);
+        when(materialRepository.findById(1L)).thenReturn(Optional.of(existingMaterial));
+
+        assertThrows(ResourceNotFoundException.class, () -> materialService.findById(1L));
+    }
+
+    @Test
     @DisplayName("findById should throw an exception when the material does not exist")
     void findById_shouldThrowExceptionWhenNotFound() {
         when(materialRepository.findById(99L)).thenReturn(Optional.empty());
@@ -123,7 +133,7 @@ class MaterialServiceTest {
     @DisplayName("findAll should return every material mapped to MaterialResponse")
     void findAll_shouldReturnMappedMaterials() {
         MaterialResponse response = new MaterialResponse();
-        when(materialRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(existingMaterial)));
+        when(materialRepository.findByIsActiveTrue(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(existingMaterial)));
         when(materialMapper.toResponse(existingMaterial)).thenReturn(response);
 
         Page<MaterialResponse> result = materialService.findAll(PageRequest.of(0, 10));
@@ -135,7 +145,7 @@ class MaterialServiceTest {
     @DisplayName("findAllSummary should return every material mapped to MaterialSummaryResponse")
     void findAllSummary_shouldReturnMappedSummaries() {
         MaterialSummaryResponse summary = new MaterialSummaryResponse();
-        when(materialRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(existingMaterial)));
+        when(materialRepository.findByIsActiveTrue(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(existingMaterial)));
         when(materialMapper.toSummaryResponse(existingMaterial)).thenReturn(summary);
 
         Page<MaterialSummaryResponse> result = materialService.findAllSummary(PageRequest.of(0, 10));

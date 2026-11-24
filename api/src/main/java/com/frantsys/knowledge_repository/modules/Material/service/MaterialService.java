@@ -31,7 +31,7 @@ public class MaterialService {
     @Transactional(readOnly = true)
     public Page<MaterialResponse> findAll(Pageable pageable) {
 
-        return materialRepository.findAll(pageable)
+        return materialRepository.findByIsActiveTrue(pageable)
                 .map(materialMapper::toResponse);
 
     }
@@ -47,7 +47,7 @@ public class MaterialService {
     @Transactional(readOnly = true)
     public Page<MaterialSummaryResponse> findAllSummary(Pageable pageable) {
 
-        return materialRepository.findAll(pageable)
+        return materialRepository.findByIsActiveTrue(pageable)
                 .map(materialMapper::toSummaryResponse);
 
     }
@@ -55,7 +55,11 @@ public class MaterialService {
     @Transactional(readOnly = true)
     public MaterialResponse findById(Long id) {
 
+        // Excluído = não encontrado para quem lê (dono e moderação ainda reativam pelo PATCH /activation)
         Material material = findMaterialById(id);
+        if (!Boolean.TRUE.equals(material.getIsActive())) {
+            throw new ResourceNotFoundException("Material não encontrado com ID: " + id);
+        }
 
         return materialMapper.toResponse(material);
 

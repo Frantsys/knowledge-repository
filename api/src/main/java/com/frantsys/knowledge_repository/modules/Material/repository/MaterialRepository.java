@@ -21,6 +21,10 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
     @EntityGraph(attributePaths = "user")
     Optional<Material> findById(Long id);
 
+    // Listagens públicas: material excluído (desativado) não aparece
+    @EntityGraph(attributePaths = "user")
+    Page<Material> findByIsActiveTrue(Pageable pageable);
+
     @EntityGraph(attributePaths = "user")
     Page<Material> findByUserEmailAndIsActiveTrue(String email, Pageable pageable);
 
