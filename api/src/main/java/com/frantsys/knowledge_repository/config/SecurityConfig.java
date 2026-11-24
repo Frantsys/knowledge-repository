@@ -22,6 +22,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -57,6 +58,8 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
+                // Depois do CORS: a resposta 429 também leva os cabeçalhos CORS e a UI consegue mostrar a mensagem
+                .addFilterAfter(new AuthRateLimitFilter(), CorsFilter.class)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
@@ -76,6 +79,10 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
+        // HS256 precisa de pelo menos 256 bits; sem isso a API nem sobe (antes havia um segredo padrão versionado)
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("JWT_SECRET ausente ou curto demais: defina uma chave aleatória de pelo menos 32 caracteres no .env");
+        }
         SecretKeySpec key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
         return NimbusJwtDecoder.withSecretKey(key).build();
     }
