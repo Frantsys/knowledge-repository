@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import LinkProgress from "@/components/link-progress";
+import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
     ArrowRight,
@@ -12,18 +14,13 @@ import {
     Compass,
     FolderOpen,
     Clock3,
+    Plus,
 } from "lucide-react";
 
-import Navbar from "@/components/navbar";
 import { listMaterials, listMyMaterials, type Material } from "@/lib/api/materials";
 import { getMe } from "@/lib/api/perfil";
-
-// Materiais não têm imagem na API: capas decorativas fixas
-const CAPAS = [
-    "https://images.unsplash.com/photo-1507842217343-583bb7270b66",
-    "https://images.unsplash.com/photo-1499750310107-5fef28a66643",
-    "https://images.unsplash.com/photo-1456324504439-367cee3b3c32",
-];
+import SubjectCover from "@/components/subject-cover";
+import { requestPublishModal } from "@/lib/hooks";
 
 function formatDate(date: string) {
     return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(date));
@@ -33,19 +30,30 @@ export default function HomePage() {
     const [meusMateriais, setMeusMateriais] = useState<Material[]>([]);
     const [recentes, setRecentes] = useState<Material[]>([]);
     const [nome, setNome] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [query, setQuery] = useState("");
+    const router = useRouter();
 
     useEffect(() => {
         getMe().then((me) => setNome(me.firstName)).catch(() => setNome(""));
-        listMyMaterials(3).then((page) => setMeusMateriais(page.content)).catch(() => setMeusMateriais([]));
-        listMaterials(8)
-            .then((page) => setRecentes(page.content.filter((material) => material.isActive).slice(0, 4)))
-            .catch(() => setRecentes([]));
+        Promise.all([
+            listMyMaterials(3).then((page) => setMeusMateriais(page.content)).catch(() => setMeusMateriais([])),
+            listMaterials(8)
+                .then((page) => setRecentes(page.content.filter((material) => material.isActive).slice(0, 4)))
+                .catch(() => setRecentes([])),
+        ]).finally(() => setLoading(false));
     }, []);
 
-    const materiaisAcessados = meusMateriais.map((material, index) => ({
+    // A busca acontece no Explorar: leva o termo pela URL (?q=)
+    function handleSearch(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        const term = query.trim();
+        router.push(term ? `/explorar?q=${encodeURIComponent(term)}` : "/explorar");
+    }
+
+    const materiaisAcessados = meusMateriais.map((material) => ({
         id: material.id,
         title: material.title,
-        image: CAPAS[index % CAPAS.length],
         category: material.subject,
         accessed: formatDate(material.createdAt),
     }));
@@ -57,19 +65,11 @@ export default function HomePage() {
         title: material.title,
         description: material.body,
         type: material.subject,
-        pages: "",
         time: formatDate(material.createdAt),
     }));
 
     return (
-        <div className="min-h-screen bg-[#f8f7fc]">
-
-            {/* =====================================================
-                NAVBAR
-            ====================================================== */}
-
-            <Navbar />
-
+        <div className="min-h-[calc(100dvh-4rem)] bg-surface">
 
             {/* =====================================================
                 CONTEÚDO
@@ -126,7 +126,7 @@ export default function HomePage() {
                                         text-2xl
                                         font-bold
                                         tracking-tight
-                                        text-[#21005f]
+                                        text-brand-ink
                                         sm:text-3xl
                                     "
                                 >
@@ -157,7 +157,9 @@ export default function HomePage() {
 
                         <div className="mt-6">
 
-                            <div
+                            <form
+                                onSubmit={handleSearch}
+                                role="search"
                                 className="
                                     flex
                                     h-12
@@ -179,11 +181,14 @@ export default function HomePage() {
 
                                 <Search
                                     size={19}
-                                    className="shrink-0 text-gray-400"
+                                    className="shrink-0 text-gray-500"
                                 />
 
                                 <input
-                                    type="text"
+                                    type="search"
+                                    value={query}
+                                    onChange={(event) => setQuery(event.target.value)}
+                                    aria-label="Buscar materiais"
                                     placeholder="Buscar materiais, disciplinas ou assuntos..."
                                     className="
                                         h-full
@@ -197,10 +202,11 @@ export default function HomePage() {
                                     "
                                 />
 
-                                <Link
-                                    href="/explorar"
+                                <button
+                                    type="submit"
+                                    aria-label="Buscar"
                                     className="
-                                        hidden
+                                        flex
                                         h-8
                                         items-center
                                         gap-1.5
@@ -212,14 +218,13 @@ export default function HomePage() {
                                         text-white
                                         transition
                                         hover:bg-purple-700
-                                        sm:flex
                                     "
                                 >
-                                    Buscar
-                                    <ArrowRight size={14} />
-                                </Link>
+                                        <span className="hidden sm:inline">Buscar</span>
+                                        <ArrowRight size={14} />
+                                </button>
 
-                            </div>
+                            </form>
 
                         </div>
 
@@ -238,7 +243,7 @@ export default function HomePage() {
                                 className="
                                     text-base
                                     font-bold
-                                    text-[#21005f]
+                                    text-brand-ink
                                     sm:text-lg
                                 "
                             >
@@ -262,6 +267,7 @@ export default function HomePage() {
 
                             <Link
                                 href="/explorar"
+                                transitionTypes={["nav-forward"]}
                                 className="
                                     group
                                     flex
@@ -322,6 +328,7 @@ export default function HomePage() {
                                     "
                                 />
 
+                              <LinkProgress />
                             </Link>
 
 
@@ -329,6 +336,7 @@ export default function HomePage() {
 
                             <Link
                                 href="/meusmateriais"
+                                transitionTypes={["nav-forward"]}
                                 className="
                                     group
                                     flex
@@ -389,6 +397,7 @@ export default function HomePage() {
                                     "
                                 />
 
+                              <LinkProgress />
                             </Link>
 
                         </div>
@@ -412,7 +421,7 @@ export default function HomePage() {
                                     className="
                                         text-lg
                                         font-bold
-                                        text-[#21005f]
+                                        text-brand-ink
                                         sm:text-xl
                                     "
                                 >
@@ -428,6 +437,7 @@ export default function HomePage() {
 
                             <Link
                                 href="/meusmateriais"
+                                transitionTypes={["nav-forward"]}
                                 className="
                                     hidden
                                     items-center
@@ -442,6 +452,7 @@ export default function HomePage() {
                             >
                                 Ver todos
                                 <ArrowRight size={14} />
+                              <LinkProgress />
                             </Link>
 
                         </div>
@@ -459,11 +470,39 @@ export default function HomePage() {
                             "
                         >
 
+                            {loading && [0, 1, 2].map((item) => (
+                                <div key={item} aria-hidden="true" className="h-[250px] animate-pulse rounded-xl border border-gray-200 bg-white">
+                                    <div className="h-[160px] rounded-t-xl bg-gray-100" />
+                                    <div className="space-y-2 p-4">
+                                        <div className="h-3 w-3/4 rounded bg-gray-100" />
+                                        <div className="h-3 w-1/3 rounded bg-gray-100" />
+                                    </div>
+                                </div>
+                            ))}
+
+                            {!loading && materiaisAcessados.length === 0 && (
+                                <div className="col-span-full flex flex-col items-center rounded-xl border border-dashed border-purple-200 bg-white px-6 py-10 text-center">
+                                    <p className="text-sm font-semibold text-gray-800">Você ainda não publicou nenhum material</p>
+                                    <p className="mt-1 max-w-sm text-sm text-gray-600">
+                                        Compartilhe um resumo ou anotação; ele aparece aqui para você retomar depois.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={requestPublishModal}
+                                        className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-purple-600 px-4 text-sm font-medium text-white transition hover:bg-purple-700"
+                                    >
+                                        <Plus size={16} />
+                                        Publicar meu primeiro material
+                                    </button>
+                                </div>
+                            )}
+
                             {materiaisAcessados.map((material) => (
 
                                 <Link
                                     key={material.id}
                                     href={`/materiais/${material.id}`}
+                                    transitionTypes={["nav-forward"]}
                                     className="
                                         group
                                         block
@@ -482,27 +521,7 @@ export default function HomePage() {
 
                                     {/* Imagem */}
 
-                                    <div
-                                        className="
-                                            relative
-                                            h-[160px]
-                                            overflow-hidden
-                                            bg-purple-100
-                                        "
-                                    >
-
-                                        <img
-                                            src={material.image}
-                                            alt={material.title}
-                                            className="
-                                                h-full
-                                                w-full
-                                                object-cover
-                                                transition
-                                                duration-500
-                                                group-hover:scale-105
-                                            "
-                                        />
+                                    <SubjectCover subject={material.category} className="h-[160px]">
 
                                         {/* Categoria */}
 
@@ -515,7 +534,7 @@ export default function HomePage() {
                                                 bg-white/90
                                                 px-2.5
                                                 py-1
-                                                text-[10px]
+                                                text-xs
                                                 font-medium
                                                 text-purple-700
                                                 shadow-sm
@@ -525,7 +544,7 @@ export default function HomePage() {
                                             {material.category}
                                         </div>
 
-                                    </div>
+                                    </SubjectCover>
 
 
                                     {/* Informações */}
@@ -570,8 +589,8 @@ export default function HomePage() {
                                                         flex
                                                         items-center
                                                         gap-1.5
-                                                        text-[11px]
-                                                        text-gray-400
+                                                        text-xs
+                                                        text-gray-500
                                                     "
                                                 >
                                                     <Clock3 size={12} />
@@ -599,6 +618,7 @@ export default function HomePage() {
 
                                     </div>
 
+                                  <LinkProgress />
                                 </Link>
 
                             ))}
@@ -610,6 +630,7 @@ export default function HomePage() {
 
                         <Link
                             href="/meusmateriais"
+                            transitionTypes={["nav-forward"]}
                             className="
                                 mt-4
                                 flex
@@ -623,6 +644,7 @@ export default function HomePage() {
                         >
                             Ver todos
                             <ArrowRight size={14} />
+                          <LinkProgress />
                         </Link>
 
                     </section>
@@ -644,7 +666,7 @@ export default function HomePage() {
                                     className="
                                         text-lg
                                         font-bold
-                                        text-[#21005f]
+                                        text-brand-ink
                                         sm:text-xl
                                     "
                                 >
@@ -660,6 +682,7 @@ export default function HomePage() {
 
                             <Link
                                 href="/explorar"
+                                transitionTypes={["nav-forward"]}
                                 className="
                                     hidden
                                     items-center
@@ -674,6 +697,7 @@ export default function HomePage() {
                             >
                                 Explorar
                                 <ArrowRight size={14} />
+                              <LinkProgress />
                             </Link>
 
                         </div>
@@ -691,15 +715,31 @@ export default function HomePage() {
                             "
                         >
 
+                            {loading && [0, 1, 2, 3].map((item) => (
+                                <div key={item} aria-hidden="true" className="h-[220px] animate-pulse rounded-xl border border-gray-200 bg-white p-4">
+                                    <div className="h-9 w-9 rounded-full bg-gray-100" />
+                                    <div className="mt-6 h-3 w-3/4 rounded bg-gray-100" />
+                                    <div className="mt-2 h-3 w-full rounded bg-gray-100" />
+                                    <div className="mt-2 h-3 w-2/3 rounded bg-gray-100" />
+                                </div>
+                            ))}
+
+                            {!loading && novosMateriais.length === 0 && (
+                                <p className="col-span-full rounded-xl border border-dashed border-gray-300 bg-white px-6 py-10 text-center text-sm text-gray-600">
+                                    Ainda não há materiais da comunidade. Que tal ser o primeiro a publicar?
+                                </p>
+                            )}
+
                             {novosMateriais.map((material) => (
 
                                 <Link
                                     key={material.id}
                                     href={`/materiais/${material.id}`}
+                                    transitionTypes={["nav-forward"]}
                                     className="
                                         group
                                         flex
-                                        min-h-[280px]
+                                        min-h-[220px]
                                         flex-col
                                         overflow-hidden
                                         rounded-xl
@@ -733,7 +773,7 @@ export default function HomePage() {
                                                 text-purple-700
                                             "
                                         >
-                                            A
+                                            {material.author.charAt(0).toUpperCase()}
                                         </div>
 
 
@@ -754,8 +794,8 @@ export default function HomePage() {
                                                 className="
                                                     mt-0.5
                                                     truncate
-                                                    text-[10px]
-                                                    text-gray-400
+                                                    text-xs
+                                                    text-gray-500
                                                 "
                                             >
                                                 {material.course}
@@ -783,17 +823,13 @@ export default function HomePage() {
                                                     bg-purple-50
                                                     px-2
                                                     py-1
-                                                    text-[10px]
+                                                    text-xs
                                                     font-medium
                                                     text-purple-700
                                                 "
                                             >
                                                 <FileText size={11} />
                                                 {material.type}
-                                            </span>
-
-                                            <span className="text-[10px] text-gray-400">
-                                                {material.pages}
                                             </span>
 
                                         </div>
@@ -820,6 +856,7 @@ export default function HomePage() {
                                             className="
                                                 mt-2
                                                 line-clamp-3
+                                                flex-1
                                                 text-xs
                                                 leading-relaxed
                                                 text-gray-500
@@ -827,40 +864,6 @@ export default function HomePage() {
                                         >
                                             {material.description}
                                         </p>
-
-
-                                        {/* Preview */}
-
-                                        <div
-                                            className="
-                                                mt-4
-                                                flex-1
-                                                overflow-hidden
-                                                rounded-lg
-                                                border
-                                                border-gray-100
-                                                bg-gray-50
-                                                p-3
-                                            "
-                                        >
-
-                                            <div className="space-y-2">
-
-                                                <div className="h-1.5 w-[88%] rounded bg-gray-200" />
-
-                                                <div className="h-1.5 w-full rounded bg-gray-200" />
-
-                                                <div className="h-1.5 w-[94%] rounded bg-gray-200" />
-
-                                                <div className="h-1.5 w-[78%] rounded bg-gray-200" />
-
-                                                <div className="h-1.5 w-[91%] rounded bg-gray-200" />
-
-                                                <div className="h-1.5 w-[70%] rounded bg-gray-200" />
-
-                                            </div>
-
-                                        </div>
 
 
                                         {/* Rodapé */}
@@ -882,8 +885,8 @@ export default function HomePage() {
                                                     flex
                                                     items-center
                                                     gap-1.5
-                                                    text-[10px]
-                                                    text-gray-400
+                                                    text-xs
+                                                    text-gray-500
                                                 "
                                             >
                                                 <Clock3 size={12} />
@@ -895,7 +898,7 @@ export default function HomePage() {
                                                     flex
                                                     items-center
                                                     gap-1
-                                                    text-[10px]
+                                                    text-xs
                                                     font-medium
                                                     text-purple-600
                                                     transition
@@ -910,6 +913,7 @@ export default function HomePage() {
 
                                     </div>
 
+                                  <LinkProgress />
                                 </Link>
 
                             ))}
@@ -921,6 +925,7 @@ export default function HomePage() {
 
                         <Link
                             href="/explorar"
+                            transitionTypes={["nav-forward"]}
                             className="
                                 mt-4
                                 flex
@@ -934,6 +939,7 @@ export default function HomePage() {
                         >
                             Explorar todos
                             <ArrowRight size={14} />
+                          <LinkProgress />
                         </Link>
 
                     </section>

@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import LinkProgress from "@/components/link-progress";
 import { usePathname, useRouter } from "next/navigation";
 import { clearToken, getToken } from "@/lib/api/client";
-import { getMe, type UserProfile } from "@/lib/api/perfil";
+import { getMe, PROFILE_UPDATED_EVENT, type UserProfile } from "@/lib/api/perfil";
+import UserAvatar from "@/components/user-avatar";
 import { createMaterial } from "@/lib/api/materials";
 import { uploadFile } from "@/lib/api/files";
+import { ACCEPTED_FILES, ACCEPTED_FILES_HINT, MAX_FILE_BYTES, OPEN_PUBLISH_EVENT, useEscapeKey } from "@/lib/hooks";
 
 import {
   BookOpen,
@@ -20,7 +23,6 @@ import {
   X,
   FileText,
   Upload,
-  Settings,
   LogOut,
   Clock3,
   CheckCircle2,
@@ -34,7 +36,6 @@ export default function Navbar() {
 
   const [me, setMe] = useState<UserProfile | null>(null);
   const userName = me?.firstName ?? "";
-  const userInitial = userName.charAt(0).toUpperCase();
 
   // Publicar material
   const [publishTitle, setPublishTitle] = useState("");
@@ -52,6 +53,11 @@ export default function Navbar() {
     }
 
     getMe().then(setMe).catch(() => setMe(null));
+
+    // O perfil avisa quando o usuário troca nome ou foto (a navbar não remonta entre as páginas)
+    const onProfileUpdated = (event: Event) => setMe((event as CustomEvent<UserProfile>).detail);
+    window.addEventListener(PROFILE_UPDATED_EVENT, onProfileUpdated);
+    return () => window.removeEventListener(PROFILE_UPDATED_EVENT, onProfileUpdated);
   }, []);
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -155,11 +161,49 @@ export default function Navbar() {
     },
   ];
 
+  // Direção da transição de página: aba à direita = para frente; aba à esquerda,
+  // ou voltar de uma tela interna (material, perfil) para uma aba = para trás
+  const currentIndex = navigation.findIndex((item) => isActive(item.href));
+
+  function directionTo(index: number): string[] {
+    if (index === currentIndex) return [];
+    return currentIndex !== -1 && index > currentIndex ? ["nav-forward"] : ["nav-back"];
+  }
+
   /*
    * ---------------------------------------------------------
    * PUBLICAR MATERIAL
    * ---------------------------------------------------------
    */
+
+  // Telas como Início e Meus materiais têm botões "Publicar" que abrem este modal
+  useEffect(() => {
+    window.addEventListener(OPEN_PUBLISH_EVENT, openPublishModal);
+    return () => window.removeEventListener(OPEN_PUBLISH_EVENT, openPublishModal);
+  }, []);
+
+  const closePublishModal = useCallback(() => setPublishModalOpen(false), []);
+  const closeMenus = useCallback(() => {
+    setProfileOpen(false);
+    setMenuOpen(false);
+  }, []);
+
+  useEscapeKey(publishModalOpen, closePublishModal);
+  useEscapeKey(!publishModalOpen && (profileOpen || menuOpen), closeMenus);
+
+  // O rascunho fica guardado ao fechar; clicar fora só fecha se não houver nada digitado, para não perder texto por engano
+  const publishDirty = Boolean(publishTitle.trim() || publishBody.trim() || publishSubject || publishFile);
+
+  function selectPublishFile(file: File | null) {
+    if (file && file.size > MAX_FILE_BYTES) {
+      setPublishError("O arquivo passa de 10 MB. Escolha um arquivo menor.");
+      setPublishFile(null);
+      return;
+    }
+
+    setPublishError(null);
+    setPublishFile(file);
+  }
 
   function openPublishModal() {
     setMenuOpen(false);
@@ -178,7 +222,7 @@ export default function Navbar() {
         title: publishTitle.trim(),
         body: publishBody.trim(),
         subject: publishSubject,
-        course: me?.course ?? publishSubject,
+        course: me?.course ?? "",
       });
 
       if (publishFile) {
@@ -217,7 +261,10 @@ export default function Navbar() {
           NAVBAR
       ====================================================== */}
 
-      <header className="relative z-50 h-16 w-full border-b border-gray-200 bg-white">
+      <header
+        className="relative z-50 h-16 w-full border-b border-gray-200 bg-white"
+        style={{ viewTransitionName: "site-header" }}
+      >
         <div className="mx-auto flex h-full items-center px-4 sm:px-6 lg:px-7">
 
           {/* =================================================
@@ -226,6 +273,7 @@ export default function Navbar() {
 
           <Link
             href="/home"
+            transitionTypes={directionTo(0)}
             className="
               flex
               min-w-0
@@ -266,6 +314,7 @@ export default function Navbar() {
             >
               Banca de Materiais
             </span>
+            <LinkProgress />
           </Link>
 
           {/* =================================================
@@ -291,6 +340,7 @@ export default function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  transitionTypes={directionTo(navigation.indexOf(item))}
                   className={`
                     relative
                     flex
@@ -347,6 +397,7 @@ export default function Navbar() {
                       }}
                     />
                   )}
+                  <LinkProgress />
                 </Link>
               );
             })}
@@ -365,6 +416,8 @@ export default function Navbar() {
             <motion.button
               type="button"
               onClick={openPublishModal}
+              aria-label="Publicar material"
+              title="Publicar material"
               whileHover={{
                 y: -1,
               }}
@@ -390,9 +443,7 @@ export default function Navbar() {
                 transition
                 hover:bg-purple-50
                 focus:outline-none
-                focus:ring-2
-                focus:ring-purple-500/20
-                lg:px-3
+                                lg:px-3
               "
             >
               <Plus size={16} />
@@ -416,6 +467,9 @@ export default function Navbar() {
                   setProfileOpen(!profileOpen);
                   setNotificationsOpen(false);
                 }}
+                aria-haspopup="menu"
+                aria-expanded={profileOpen}
+                aria-label={`Menu da conta de ${userName}`}
                 whileTap={{
                   scale: 0.97,
                 }}
@@ -430,28 +484,11 @@ export default function Navbar() {
                   transition
                   hover:bg-gray-50
                   focus:outline-none
-                  focus:ring-2
-                  focus:ring-purple-500/20
-                "
+                                  "
               >
                 {/* Avatar */}
 
-                <div
-                  className="
-                    flex
-                    h-7
-                    w-7
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-purple-600
-                    text-xs
-                    font-semibold
-                    text-white
-                  "
-                >
-                  {userInitial}
-                </div>
+                <UserAvatar user={me} className="h-7 w-7 rounded-full text-xs" />
 
                 <span className="hidden text-xs font-medium lg:inline">
                   {userName}
@@ -514,6 +551,7 @@ export default function Navbar() {
 
                     <Link
                       href="/perfil"
+                  transitionTypes={["nav-forward"]}
                       onClick={() => setProfileOpen(false)}
                       className="
                         mb-1
@@ -528,58 +566,18 @@ export default function Navbar() {
                         hover:bg-purple-50
                       "
                     >
-                      <div
-                        className="
-                          flex
-                          h-9
-                          w-9
-                          shrink-0
-                          items-center
-                          justify-center
-                          rounded-full
-                          bg-purple-600
-                          text-sm
-                          font-semibold
-                          text-white
-                        "
-                      >
-                        {userInitial}
-                      </div>
+                      <UserAvatar user={me} className="h-9 w-9 rounded-full text-sm" />
 
                       <div className="min-w-0">
                         <p className="truncate text-xs font-semibold text-gray-900">
                           {userName}
                         </p>
 
-                        <p className="truncate text-[11px] text-gray-500">
-                          Minha conta
+                        <p className="truncate text-xs text-gray-500">
+                          Ver meu perfil
                         </p>
                       </div>
-                    </Link>
-
-                    {/* Perfil */}
-
-                    <Link
-                      href="/perfil"
-                      onClick={() => setProfileOpen(false)}
-                      className="
-                        flex
-                        items-center
-                        gap-3
-                        rounded-lg
-                        px-3
-                        py-2.5
-                        text-xs
-                        font-medium
-                        text-gray-700
-                        transition
-                        hover:bg-purple-50
-                        hover:text-purple-600
-                      "
-                    >
-                      <Settings size={16} />
-
-                      Configurações
+                      <LinkProgress />
                     </Link>
 
                     {/* Publicar */}
@@ -769,6 +767,7 @@ export default function Navbar() {
                     <Link
                       key={item.href}
                       href={item.href}
+                  transitionTypes={directionTo(navigation.indexOf(item))}
                       onClick={() => setMenuOpen(false)}
                       className={`
                         flex
@@ -790,6 +789,7 @@ export default function Navbar() {
                       <Icon size={18} />
 
                       {item.name}
+                      <LinkProgress />
                     </Link>
                   );
                 })}
@@ -830,6 +830,7 @@ export default function Navbar() {
 
                 <Link
                   href="/perfil"
+                  transitionTypes={["nav-forward"]}
                   onClick={() => setMenuOpen(false)}
                   className="
                     mt-2
@@ -844,22 +845,7 @@ export default function Navbar() {
                     hover:bg-gray-50
                   "
                 >
-                  <div
-                    className="
-                      flex
-                      h-9
-                      w-9
-                      items-center
-                      justify-center
-                      rounded-full
-                      bg-purple-600
-                      text-sm
-                      font-semibold
-                      text-white
-                    "
-                  >
-                    {userInitial}
-                  </div>
+                  <UserAvatar user={me} className="h-9 w-9 rounded-full text-sm" />
 
                   <div>
                     <p className="text-sm font-medium text-gray-800">
@@ -870,14 +856,7 @@ export default function Navbar() {
                       Minha conta
                     </p>
                   </div>
-
-                  <Settings
-                    size={18}
-                    className="
-                      ml-auto
-                      text-gray-500
-                    "
-                  />
+                  <LinkProgress />
                 </Link>
 
                 {/* Sair */}
@@ -939,7 +918,7 @@ export default function Navbar() {
               opacity: 0,
             }}
             onMouseDown={(event) => {
-              if (event.target === event.currentTarget) {
+              if (event.target === event.currentTarget && !publishDirty) {
                 setPublishModalOpen(false);
               }
             }}
@@ -965,6 +944,9 @@ export default function Navbar() {
                 stiffness: 350,
                 damping: 25,
               }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="publish-title"
               className="
                 w-full
                 max-w-[560px]
@@ -991,7 +973,7 @@ export default function Navbar() {
                 "
               >
                 <div>
-                  <h2 className="text-base font-semibold text-gray-900">
+                  <h2 id="publish-title" className="text-base font-semibold text-gray-900">
                     Publicar material
                   </h2>
 
@@ -1046,6 +1028,7 @@ export default function Navbar() {
                   <input
                     id="material-title"
                     type="text"
+                    autoFocus
                     value={publishTitle}
                     onChange={(event) => setPublishTitle(event.target.value)}
                     placeholder="Ex.: Resumo de Direito Penal"
@@ -1125,7 +1108,7 @@ export default function Navbar() {
                       text-gray-700
                     "
                   >
-                    Categoria
+                    Disciplina
                   </label>
 
                   <select
@@ -1150,7 +1133,7 @@ export default function Navbar() {
                     onChange={(event) => setPublishSubject(event.target.value)}
                   >
                     <option value="" disabled>
-                      Selecione uma categoria
+                      Selecione uma disciplina
                     </option>
 
                     <option value="Direito">
@@ -1178,17 +1161,9 @@ export default function Navbar() {
                 {/* Upload */}
 
                 <div>
-                  <label
-                    className="
-                      mb-1.5
-                      block
-                      text-xs
-                      font-medium
-                      text-gray-700
-                    "
-                  >
-                    Arquivo
-                  </label>
+                  <p className="mb-1.5 block text-xs font-medium text-gray-700">
+                    Arquivo <span className="font-normal text-gray-500">(opcional)</span>
+                  </p>
 
                   <label
                     htmlFor="material-file"
@@ -1230,18 +1205,32 @@ export default function Navbar() {
                       {publishFile ? publishFile.name : "Clique para selecionar um arquivo"}
                     </p>
 
-                    <p className="mt-1 text-[11px] text-gray-400">
-                      PDF, DOC, DOCX ou PPTX
+                    <p className="mt-1 text-xs text-gray-500">
+                      {ACCEPTED_FILES_HINT}
                     </p>
 
                     <input
                       id="material-file"
                       type="file"
-                      accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.zip"
-                      onChange={(event) => setPublishFile(event.target.files?.[0] ?? null)}
-                      className="hidden"
+                      accept={ACCEPTED_FILES}
+                      onChange={(event) => {
+                        selectPublishFile(event.target.files?.[0] ?? null);
+                        event.target.value = "";
+                      }}
+                      className="sr-only"
                     />
                   </label>
+
+                  {publishFile && (
+                    <button
+                      type="button"
+                      onClick={() => setPublishFile(null)}
+                      className="mt-2 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-red-600"
+                    >
+                      <X size={14} />
+                      Remover arquivo
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1290,7 +1279,7 @@ export default function Navbar() {
                 <motion.button
                   type="button"
                   onClick={handlePublish}
-                  disabled={publishing || !publishTitle.trim() || !publishBody.trim() || !publishSubject}
+                  disabled={publishing || !me || !publishTitle.trim() || !publishBody.trim() || !publishSubject}
                   whileTap={{
                     scale: 0.97,
                   }}

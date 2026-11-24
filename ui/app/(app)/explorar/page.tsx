@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import LinkProgress from "@/components/link-progress";
 import { useRouter } from "next/navigation";
 import {
     ArrowDownAZ,
@@ -15,7 +16,6 @@ import {
     X,
 } from "lucide-react";
 
-import Navbar from "@/components/navbar";
 import { listMaterials, type Material } from "@/lib/api/materials";
 
 function formatDate(date: string) {
@@ -41,8 +41,14 @@ export default function ExplorarPage() {
 
     // shortcut: busca/filtro no cliente sobre os 100 mais recentes; criar busca no servidor quando houver muitos materiais
     useEffect(() => {
+        // Termo vindo da busca da tela inicial (/explorar?q=...)
+        const initialQuery = new URLSearchParams(window.location.search).get("q") ?? "";
         listMaterials(100)
-            .then((page) => setMaterials(page.content.filter((material) => material.isActive)))
+            .then((page) => {
+                setMaterials(page.content.filter((material) => material.isActive));
+                setSearch(initialQuery);
+                setSubmittedSearch(initialQuery);
+            })
             .catch((error: Error) => setLoadError(error.message))
             .finally(() => setLoading(false));
     }, []);
@@ -111,8 +117,7 @@ export default function ExplorarPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#f8f7fc]">
-            <Navbar />
+        <div className="min-h-[calc(100dvh-4rem)] bg-surface">
 
             <main className="mx-auto w-full max-w-[1250px] px-4 py-7 sm:px-6 sm:py-9 lg:px-10 lg:py-10">
                 <section className="relative mb-7 overflow-hidden rounded-2xl bg-gradient-to-r from-[#250080] via-purple-700 to-indigo-600 px-5 py-7 text-white shadow-sm sm:px-8 sm:py-9">
@@ -205,7 +210,7 @@ export default function ExplorarPage() {
                                     <h2 className="text-sm font-semibold text-gray-900">
                                         Filtrar materiais
                                     </h2>
-                                    <p className="text-xs text-gray-400">
+                                    <p className="text-xs text-gray-500">
                                         Refine sua busca
                                     </p>
                                 </div>
@@ -214,7 +219,7 @@ export default function ExplorarPage() {
                                 type="button"
                                 onClick={() => setFiltersOpen(false)}
                                 aria-label="Fechar filtros"
-                                className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 lg:hidden"
+                                className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 lg:hidden"
                             >
                                 <X size={17} />
                             </button>
@@ -242,7 +247,7 @@ export default function ExplorarPage() {
                                 </select>
                             </div>
 
-                            <div className="rounded-xl bg-[#f8f7fc] p-3.5">
+                            <div className="rounded-xl bg-surface p-3.5">
                                 <p className="text-xs font-semibold text-gray-700">
                                     Dica de pesquisa
                                 </p>
@@ -305,6 +310,7 @@ export default function ExplorarPage() {
                                     <Link
                                         key={material.id}
                                         href={`/materiais/${material.id}`}
+                                        transitionTypes={["nav-forward"]}
                                         className="group flex min-h-[255px] flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                                     >
                                         <div className="mb-4 flex items-start justify-between gap-3">
@@ -313,10 +319,10 @@ export default function ExplorarPage() {
                                                     <BookOpen size={20} />
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <span className="inline-flex max-w-full items-center rounded-md bg-purple-50 px-2 py-1 text-[11px] font-semibold text-purple-700">
+                                                    <span className="inline-flex max-w-full items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-semibold text-purple-700">
                                                         <span className="truncate">{material.subject}</span>
                                                     </span>
-                                                    <p className="mt-1 truncate text-xs text-gray-400">
+                                                    <p className="mt-1 truncate text-xs text-gray-500">
                                                         {material.course}
                                                     </p>
                                                 </div>
@@ -327,7 +333,7 @@ export default function ExplorarPage() {
                                             />
                                         </div>
 
-                                        <h3 className="mb-2 line-clamp-2 text-base font-bold leading-snug text-gray-900 transition group-hover:text-[#3b168c]">
+                                        <h3 className="mb-2 line-clamp-2 text-base font-bold leading-snug text-gray-900 transition group-hover:text-brand-ink">
                                             {material.title}
                                         </h3>
                                         <p className="mb-5 line-clamp-3 flex-1 text-sm leading-6 text-gray-500">
@@ -339,18 +345,19 @@ export default function ExplorarPage() {
                                             usando o ID retornado pela API. */}
                                         <div className="mt-auto flex items-end justify-between gap-3 border-t border-gray-100 pt-4">
                                             <div className="min-w-0">
-                                                <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                                                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
                                                     Compartilhado por
                                                 </p>
                                                 <p className="mt-1 truncate text-xs font-semibold text-gray-700">
                                                     {material.createdBy}
                                                 </p>
                                             </div>
-                                            <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-gray-400">
+                                            <span className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500">
                                                 <CalendarDays size={13} />
                                                 {formatDate(material.createdAt)}
                                             </span>
                                         </div>
+                                      <LinkProgress />
                                     </Link>
                                 ))}
                             </div>

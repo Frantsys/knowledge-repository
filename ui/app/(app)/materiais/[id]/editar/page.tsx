@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import { getMaterial, updateMaterial, type Material } from "@/lib/api/materials";
 import { listFiles, uploadFile } from "@/lib/api/files";
+import { toast } from "@/components/toast";
+import EditSkeleton from "./edit-skeleton";
+import { ACCEPTED_FILES, ACCEPTED_FILES_HINT, MAX_FILE_BYTES, useEscapeKey } from "@/lib/hooks";
 
 const CATEGORIES = ["Direito", "Tecnologia", "Administração", "Engenharia", "Outros"];
 
@@ -31,6 +34,9 @@ export default function EditarMaterialPage() {
   const [category, setCategory] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
+  // Esc sai da edição sem salvar (mesmo efeito do X)
+  useEscapeKey(!saving, () => router.push(`/materiais/${id}`));
+
   useEffect(() => {
     Promise.all([
       getMaterial(id).then((data) => {
@@ -46,19 +52,13 @@ export default function EditarMaterialPage() {
   }, [id]);
 
   if (loading) {
-    return (
-      <main className="min-h-screen bg-gray-50">
-        <p role="status" className="py-24 text-center text-sm text-gray-500">
-          Carregando material...
-        </p>
-      </main>
-    );
+    return <EditSkeleton />;
   }
 
   if (!material) {
     return (
-      <main className="min-h-screen bg-gray-50">
-        <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-6">
+      <main className="min-h-[calc(100dvh-4rem)] bg-surface">
+        <div className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-3xl items-center justify-center px-6">
           <div className="text-center">
             <h1 className="text-xl font-semibold text-gray-900">
               Material não encontrado
@@ -109,6 +109,7 @@ export default function EditarMaterialPage() {
         await uploadFile(id, file);
       }
 
+      toast("Alterações salvas.");
       router.push(`/materiais/${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível salvar.");
@@ -117,7 +118,7 @@ export default function EditarMaterialPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-[calc(100dvh-4rem)] bg-surface">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
 
         {/* ===========================================
@@ -328,7 +329,7 @@ export default function EditarMaterialPage() {
                   text-gray-700
                 "
               >
-                Categoria
+                Disciplina
               </label>
 
               <select
@@ -355,7 +356,7 @@ export default function EditarMaterialPage() {
                 "
               >
                 <option value="" disabled>
-                  Selecione uma categoria
+                  Selecione uma disciplina
                 </option>
 
                 <option value="Direito">
@@ -419,7 +420,7 @@ export default function EditarMaterialPage() {
                   </p>
 
                   {!file && currentFileName && (
-                    <p className="mt-0.5 text-[11px] text-gray-400">
+                    <p className="mt-0.5 text-xs text-gray-500">
                       Arquivo atual
                     </p>
                   )}
@@ -463,26 +464,45 @@ export default function EditarMaterialPage() {
                 </div>
 
                 <p className="text-xs font-medium text-gray-700">
-                  Clique para substituir o arquivo
+                  {file ? file.name : "Clique para adicionar outro arquivo"}
                 </p>
 
-                <p className="mt-1 text-[11px] text-gray-400">
-                  PDF, DOC, DOCX ou PPTX
+                <p className="mt-1 text-xs text-gray-500">
+                  {ACCEPTED_FILES_HINT}
                 </p>
 
                 <input
                   id="material-file"
                   type="file"
-                  accept=".pdf,.doc,.docx,.pptx"
-                  className="hidden"
+                  accept={ACCEPTED_FILES}
+                  className="sr-only"
                   onChange={(event) => {
                     const selectedFile =
                       event.target.files?.[0] ?? null;
+                    event.target.value = "";
 
+                    if (selectedFile && selectedFile.size > MAX_FILE_BYTES) {
+                      setError("O arquivo passa de 10 MB. Escolha um arquivo menor.");
+                      setFile(null);
+                      return;
+                    }
+
+                    setError(null);
                     setFile(selectedFile);
                   }}
                 />
               </label>
+
+              {file && (
+                <button
+                  type="button"
+                  onClick={() => setFile(null)}
+                  className="mt-2 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-red-600"
+                >
+                  <X size={14} />
+                  Remover arquivo selecionado
+                </button>
+              )}
             </div>
           </div>
 

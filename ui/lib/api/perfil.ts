@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { API_URL, apiFetch } from "./client";
 
 export interface Address {
   country: string;
@@ -25,6 +25,8 @@ export interface UserProfile {
   role: string;
   createdAt: string;
   isActive: boolean;
+  // Caminho relativo da foto (/v1/api/users/avatars/{chave}) ou null sem foto
+  avatarUrl: string | null;
 }
 
 // Espelha o UserUpdateRequest da API
@@ -45,6 +47,29 @@ export function updateUser(id: number, data: UpdateProfileData): Promise<UserPro
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+// URL absoluta da foto para <img>; o endpoint é público e a URL muda a cada nova foto
+export function avatarSrc(user: Pick<UserProfile, "avatarUrl"> | null): string | null {
+  return user?.avatarUrl ? `${API_URL}${user.avatarUrl}` : null;
+}
+
+export function uploadAvatar(file: File): Promise<UserProfile> {
+  const form = new FormData();
+  form.append("file", file);
+
+  return apiFetch<UserProfile>("/v1/api/users/me/avatar", { method: "PUT", body: form });
+}
+
+export function removeAvatar(): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/v1/api/users/me/avatar", { method: "DELETE" });
+}
+
+// A navbar fica montada entre as páginas: quem altera o perfil avisa por este evento para ela atualizar nome e foto
+export const PROFILE_UPDATED_EVENT = "profile-updated";
+
+export function notifyProfileUpdated(user: UserProfile) {
+  window.dispatchEvent(new CustomEvent<UserProfile>(PROFILE_UPDATED_EVENT, { detail: user }));
 }
 
 export function changePassword(currentPassword: string, newPassword: string): Promise<void> {

@@ -1,7 +1,7 @@
 "use client";
 
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 
 import {
@@ -21,16 +21,27 @@ import {
  Eye,
  EyeOff,
  AlertCircle,
- Camera,
- ImagePlus,
- Trash2,
  ArrowUpRight,
  Sparkles,
+ Camera,
+ Loader2,
 } from "lucide-react";
 
 
-import Navbar from "@/components/navbar";
-import { changePassword, getMe, updateUser, type Address, type UserProfile as ApiUser } from "@/lib/api/perfil";
+import { toast } from "@/components/toast";
+import { useEscapeKey } from "@/lib/hooks";
+import { maskPhone } from "@/lib/masks";
+import {
+ avatarSrc,
+ changePassword,
+ getMe,
+ notifyProfileUpdated,
+ removeAvatar,
+ updateUser,
+ uploadAvatar,
+ type Address,
+ type UserProfile as ApiUser,
+} from "@/lib/api/perfil";
 
 
 type UserProfile = {
@@ -68,7 +79,7 @@ const initialUser: UserProfile = {
 
 
 // Adapta o UserResponse da API ao formato da tela (data sem hora, cidade/estado do endereço)
-function toProfile(api: ApiUser, profileImage: string | null): UserProfile {
+function toProfile(api: ApiUser): UserProfile {
  return {
    id: api.id,
    cpf: api.cpf,
@@ -82,7 +93,7 @@ function toProfile(api: ApiUser, profileImage: string | null): UserProfile {
    isActive: api.isActive,
    city: api.address?.city ?? "",
    state: api.address?.state ?? "",
-   profileImage,
+   profileImage: avatarSrc(api),
  };
 }
 
@@ -111,12 +122,59 @@ export default function PerfilPage() {
  const [user, setUser] = useState<UserProfile>(initialUser);
  const [address, setAddress] = useState<Address | null>(null);
  const [saving, setSaving] = useState(false);
+ const [avatarBusy, setAvatarBusy] = useState(false);
+ const avatarInputRef = useRef<HTMLInputElement>(null);
+
+ // A foto é salva assim que escolhida (não espera o "Salvar" do modal): a API confere tipo e tamanho de novo
+ async function handleAvatarSelected(event: React.ChangeEvent<HTMLInputElement>) {
+   const file = event.target.files?.[0];
+   event.target.value = "";
+   if (!file) return;
+
+   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+     toast("Formato não suportado. Envie uma imagem JPG, PNG ou WEBP.", { type: "error" });
+     return;
+   }
+
+   if (file.size > 5 * 1024 * 1024) {
+     toast("A imagem deve ter no máximo 5 MB.", { type: "error" });
+     return;
+   }
+
+   setAvatarBusy(true);
+
+   try {
+     const updated = await uploadAvatar(file);
+     setUser(toProfile(updated));
+     notifyProfileUpdated(updated);
+     toast("Foto de perfil atualizada.");
+   } catch (error) {
+     toast(error instanceof Error ? error.message : "Não foi possível enviar a foto.", { type: "error" });
+   } finally {
+     setAvatarBusy(false);
+   }
+ }
+
+ async function handleAvatarRemove() {
+   setAvatarBusy(true);
+
+   try {
+     const updated = await removeAvatar();
+     setUser(toProfile(updated));
+     notifyProfileUpdated(updated);
+     toast("Foto de perfil removida.");
+   } catch (error) {
+     toast(error instanceof Error ? error.message : "Não foi possível remover a foto.", { type: "error" });
+   } finally {
+     setAvatarBusy(false);
+   }
+ }
 
 
  useEffect(() => {
    getMe()
      .then((me) => {
-       setUser(toProfile(me, null));
+       setUser(toProfile(me));
        setAddress(me.address);
      })
      .catch(() => undefined);
@@ -137,16 +195,6 @@ export default function PerfilPage() {
  });
 
 
- const [profileImage, setProfileImage] = useState<string | null>(
-   initialUser.profileImage
- );
-
-
- const [selectedImageFile, setSelectedImageFile] =
-   useState<File | null>(null);
-
-
- const fileInputRef = useRef<HTMLInputElement>(null);
 
 
  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
@@ -167,6 +215,9 @@ export default function PerfilPage() {
  const [passwordError, setPasswordError] = useState("");
  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
+
+ const closeEditModal = useCallback(() => setEditModalOpen(false), []);
+ useEscapeKey(editModalOpen, closeEditModal);
 
  function handleOpenEdit() {
    setFormData({
@@ -195,79 +246,12 @@ export default function PerfilPage() {
  }
 
 
- function handleImageSelect(
-   event: React.ChangeEvent<HTMLInputElement>
- ) {
-   const file = event.target.files?.[0];
-
-
-   if (!file) {
-     return;
-   }
-
-
-   if (!file.type.startsWith("image/")) {
-     return;
-   }
-
-
-   if (file.size > 5 * 1024 * 1024) {
-     alert("A imagem deve possuir no máximo 5 MB.");
-     return;
-   }
-
-
-   const imageUrl = URL.createObjectURL(file);
-
-
-   if (profileImage?.startsWith("blob:")) {
-     URL.revokeObjectURL(profileImage);
-   }
-
-
-   setSelectedImageFile(file);
-   setProfileImage(imageUrl);
-
-
-   /*
-    * API futuramente:
-    *
-    * const formData = new FormData();
-    * formData.append("profileImage", file);
-    *
-    * await updateProfileImage(token, formData);
-    */
- }
-
-
- function handleRemoveImage() {
-   if (profileImage?.startsWith("blob:")) {
-     URL.revokeObjectURL(profileImage);
-   }
-
-
-   setProfileImage(null);
-   setSelectedImageFile(null);
-
-
-   /*
-    * API futuramente:
-    *
-    * await removeProfileImage(token);
-    */
- }
-
-
- function handleOpenImageSelector() {
-   fileInputRef.current?.click();
- }
 
 
  async function handleSaveProfile() {
    setSaving(true);
 
    try {
-     // Foto de perfil não tem backend: fica só na tela
      const updated = await updateUser(user.id, {
        firstName: formData.firstName.trim(),
        lastName: formData.lastName.trim(),
@@ -278,12 +262,13 @@ export default function PerfilPage() {
          : undefined,
      });
 
-     setUser(toProfile(updated, profileImage));
+     setUser(toProfile(updated));
      setAddress(updated.address);
-     setSelectedImageFile(null);
+     notifyProfileUpdated(updated);
      setEditModalOpen(false);
+     toast("Perfil atualizado.");
    } catch (error) {
-     alert(error instanceof Error ? error.message : "Não foi possível salvar o perfil.");
+     toast(error instanceof Error ? error.message : "Não foi possível salvar o perfil.", { type: "error" });
    } finally {
      setSaving(false);
    }
@@ -395,6 +380,8 @@ export default function PerfilPage() {
  }
 
 
+ useEscapeKey(passwordModalOpen, () => handleClosePasswordModal());
+
  function handleClosePasswordModal() {
    setPasswordModalOpen(false);
 
@@ -420,8 +407,7 @@ export default function PerfilPage() {
 
 
  return (
-   <div className="min-h-screen bg-[#f8f7fc] text-gray-900">
-     <Navbar />
+   <div className="min-h-[calc(100dvh-4rem)] bg-surface text-gray-900">
 
 
      <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
@@ -492,27 +478,41 @@ export default function PerfilPage() {
              <div className="flex min-w-0 items-center gap-4 sm:gap-5">
                <div className="-mt-12 shrink-0 sm:-mt-14">
                  <div className="relative">
-                   <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border-4 border-white bg-gradient-to-br from-purple-500 to-indigo-700 text-2xl font-bold text-white shadow-lg shadow-purple-950/15 sm:h-32 sm:w-32 sm:text-3xl">
-                     {profileImage ? (
-                       <img
-                         src={profileImage}
-                         alt={`Foto de perfil de ${fullName}`}
-                         className="h-full w-full object-cover"
-                       />
+                   <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border-4 border-white bg-gradient-to-br from-purple-500 to-indigo-700 text-2xl font-bold text-white shadow-lg shadow-purple-950/15 sm:h-32 sm:w-32 sm:text-3xl">
+                     {user.profileImage ? (
+                       // eslint-disable-next-line @next/next/no-img-element -- imagem servida pela API (outro host)
+                       <img src={user.profileImage} alt={`Foto de perfil de ${fullName}`} className="h-full w-full object-cover" />
                      ) : (
                        initials
                      )}
-                   </div>
 
+                     {avatarBusy && (
+                       <span role="status" aria-label="Salvando foto" className="absolute inset-1 flex items-center justify-center rounded-[1.25rem] bg-black/45">
+                         <Loader2 size={26} className="animate-spin text-white" aria-hidden="true" />
+                       </span>
+                     )}
+                   </div>
 
                    <button
                      type="button"
-                     onClick={handleOpenEdit}
-                     className="absolute -bottom-1.5 -right-1.5 flex h-10 w-10 items-center justify-center rounded-2xl border-4 border-white bg-purple-600 text-white shadow-md transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                     aria-label="Alterar foto de perfil"
+                     onClick={() => avatarInputRef.current?.click()}
+                     disabled={avatarBusy}
+                     aria-label={user.profileImage ? "Trocar foto de perfil" : "Adicionar foto de perfil"}
+                     title={user.profileImage ? "Trocar foto" : "Adicionar foto"}
+                     className="absolute -bottom-1.5 -right-1.5 flex h-10 w-10 items-center justify-center rounded-2xl border-4 border-white bg-purple-600 text-white shadow-md transition hover:bg-purple-700 disabled:opacity-70"
                    >
                      <Camera size={16} />
                    </button>
+
+                   <input
+                     ref={avatarInputRef}
+                     type="file"
+                     accept="image/jpeg,image/png,image/webp"
+                     onChange={handleAvatarSelected}
+                     className="sr-only"
+                     tabIndex={-1}
+                     aria-hidden="true"
+                   />
                  </div>
                </div>
 
@@ -524,7 +524,7 @@ export default function PerfilPage() {
                    </h2>
 
 
-                   <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-100 bg-purple-50 px-3 py-1 text-[11px] font-semibold text-purple-700">
+                   <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-100 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
                      <ShieldCheck size={13} />
                      {getRoleLabel(user.role)}
                    </span>
@@ -537,10 +537,23 @@ export default function PerfilPage() {
                  </p>
 
 
-                 <p className="mt-2 text-xs text-gray-400">
+                 <p className="mt-2 text-xs text-gray-500">
                    Membro desde{" "}
                    {new Date(`${user.createdAt}T12:00:00`).toLocaleDateString(
                      "pt-BR"
+                   )}
+                   {user.profileImage && (
+                     <>
+                       {" · "}
+                       <button
+                         type="button"
+                         onClick={handleAvatarRemove}
+                         disabled={avatarBusy}
+                         className="font-medium text-gray-600 underline-offset-2 hover:text-red-600 hover:underline disabled:opacity-60"
+                       >
+                         Remover foto
+                       </button>
+                     </>
                    )}
                  </p>
                </div>
@@ -765,15 +778,6 @@ export default function PerfilPage() {
      </main>
 
 
-     <input
-       ref={fileInputRef}
-       type="file"
-       accept="image/jpeg,image/png,image/webp"
-       onChange={handleImageSelect}
-       className="hidden"
-     />
-
-
      {editModalOpen && (
        <div
          className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-950/50 p-3 backdrop-blur-sm sm:p-5"
@@ -815,7 +819,7 @@ export default function PerfilPage() {
              <button
                type="button"
                onClick={() => setEditModalOpen(false)}
-               className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+               className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
                aria-label="Fechar"
              >
                <X size={19} />
@@ -824,68 +828,6 @@ export default function PerfilPage() {
 
 
            <div className="max-h-[70vh] overflow-y-auto p-5 sm:p-7">
-             <div className="mb-7 flex flex-col items-center gap-4 rounded-2xl border border-gray-200/80 bg-gray-50/70 p-5 sm:flex-row sm:items-center sm:gap-5">
-               <div className="relative shrink-0">
-                 <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-br from-purple-500 to-indigo-700 text-2xl font-bold text-white shadow-md">
-                   {profileImage ? (
-                     <img
-                       src={profileImage}
-                       alt="Pré-visualização da foto de perfil"
-                       className="h-full w-full object-cover"
-                     />
-                   ) : (
-                     initials
-                   )}
-                 </div>
-
-
-                 <div className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-xl border-2 border-white bg-purple-600 text-white shadow-sm">
-                   <Camera size={15} />
-                 </div>
-               </div>
-
-
-               <div className="w-full min-w-0 text-center sm:text-left">
-                 <p className="text-sm font-bold text-gray-950">
-                   Foto de perfil
-                 </p>
-
-
-                 <p className="mt-1.5 text-xs leading-5 text-gray-500">
-                   Personalize seu perfil com uma foto. Caso não tenha uma,
-                   suas iniciais serão exibidas.
-                 </p>
-
-
-                 <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
-                   <button
-                     type="button"
-                     onClick={handleOpenImageSelector}
-                     className="flex h-10 items-center gap-2 rounded-xl bg-purple-600 px-4 text-xs font-semibold text-white transition hover:bg-purple-700"
-                   >
-                     <ImagePlus size={15} />
-                     {profileImage ? "Trocar foto" : "Adicionar foto"}
-                   </button>
-
-
-                   {profileImage && (
-                     <button
-                       type="button"
-                       onClick={handleRemoveImage}
-                       className="flex h-10 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-                     >
-                       <Trash2 size={15} />
-                       Remover
-                     </button>
-                   )}
-                 </div>
-
-
-                 <p className="mt-2.5 text-[11px] text-gray-400">
-                   JPG, PNG ou WEBP · Máximo 5 MB
-                 </p>
-               </div>
-             </div>
 
 
              <div className="grid gap-5 sm:grid-cols-2">
@@ -911,7 +853,7 @@ export default function PerfilPage() {
                  label="Telefone"
                  value={formData.phoneNumber}
                  onChange={(value) =>
-                   handleInputChange("phoneNumber", value)
+                   handleInputChange("phoneNumber", maskPhone(value))
                  }
                />
 
@@ -971,7 +913,7 @@ export default function PerfilPage() {
 
 
                  <div className="flex h-11 items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3.5">
-                   <CreditCard size={16} className="text-gray-400" />
+                   <CreditCard size={16} className="text-gray-500" />
 
 
                    <span className="text-sm font-medium text-gray-500">
@@ -979,7 +921,7 @@ export default function PerfilPage() {
                    </span>
 
 
-                   <span className="ml-auto rounded-lg bg-gray-200/70 px-2 py-1 text-[10px] font-semibold text-gray-500">
+                   <span className="ml-auto rounded-lg bg-gray-200/70 px-2 py-1 text-xs font-semibold text-gray-500">
                      Não editável
                    </span>
                  </div>
@@ -1054,7 +996,7 @@ export default function PerfilPage() {
              <button
                type="button"
                onClick={handleClosePasswordModal}
-               className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+               className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
                aria-label="Fechar"
              >
                <X size={19} />
@@ -1207,7 +1149,7 @@ function ProfileInfo({
 
 
      <div className="min-w-0 flex-1 pt-0.5">
-       <p className="text-xs font-medium text-gray-400">
+       <p className="text-xs font-medium text-gray-500">
          {label}
        </p>
 
@@ -1305,7 +1247,7 @@ function PasswordField({
        <button
          type="button"
          onClick={onToggle}
-         className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-purple-50 hover:text-purple-600"
+         className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-purple-50 hover:text-purple-600"
          aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
        >
          {visible ? <EyeOff size={17} /> : <Eye size={17} />}

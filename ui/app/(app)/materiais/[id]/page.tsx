@@ -13,14 +13,13 @@ import {
     Pencil,
 } from "lucide-react";
 
-import Navbar from "@/components/navbar";
+import SubjectCover from "@/components/subject-cover";
+import MaterialSkeleton from "./material-skeleton";
+import { toast } from "@/components/toast";
 import { getMaterial, type Material } from "@/lib/api/materials";
 import { downloadFile, listFiles, type MaterialFile } from "@/lib/api/files";
 import { createComment, listComments, type Comment } from "@/lib/api/comments";
 import { getMe } from "@/lib/api/perfil";
-
-// Materiais não têm imagem na API: capa decorativa fixa
-const CAPA = "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=900&q=80";
 
 function formatDate(date: string) {
     return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(date));
@@ -39,6 +38,10 @@ export default function MaterialPage() {
     const [loading, setLoading] = useState(true);
     const [newComment, setNewComment] = useState("");
     const [commentError, setCommentError] = useState<string | null>(null);
+    const [sendingComment, setSendingComment] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [downloading, setDownloading] = useState<number | "all" | null>(null);
+    const [attempt, setAttempt] = useState(0);
 
     useEffect(() => {
         Promise.all([
@@ -47,13 +50,37 @@ export default function MaterialPage() {
             listComments(id).then((page) => setComments(page.content)),
             getMe().then((me) => setMyId(me.id)),
         ])
-            .catch(() => undefined)
+            // 404 vira "não encontrado"; qualquer outra falha mostra o erro com opção de tentar de novo
+            .catch((error: Error & { status?: number }) => {
+                if (error.status !== 404) setLoadError(error.message);
+            })
             .finally(() => setLoading(false));
-    }, [id]);
+    }, [id, attempt]);
+
+    // Volta para a tela de onde o usuário veio (Explorar, Meus materiais, Início); sem histórico, vai ao Explorar
+    function goBack() {
+        if (window.history.length > 1) router.back();
+        else router.push("/explorar");
+    }
+
+    async function handleDownload(target: MaterialFile | "all") {
+        setDownloading(target === "all" ? "all" : target.id);
+
+        try {
+            for (const file of target === "all" ? files : [target]) {
+                await downloadFile(file);
+            }
+        } catch (error) {
+            toast(error instanceof Error ? error.message : "Não foi possível baixar o arquivo.", { type: "error" });
+        } finally {
+            setDownloading(null);
+        }
+    }
 
     async function handleComment(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setCommentError(null);
+        setSendingComment(true);
 
         try {
             const comment = await createComment(id, newComment.trim());
@@ -61,6 +88,8 @@ export default function MaterialPage() {
             setNewComment("");
         } catch (error) {
             setCommentError(error instanceof Error ? error.message : "Não foi possível comentar.");
+        } finally {
+            setSendingComment(false);
         }
     }
 
@@ -73,7 +102,6 @@ export default function MaterialPage() {
               paginas: `${files.length} ${files.length === 1 ? "arquivo" : "arquivos"}`,
               tempo: formatDate(data.createdAt),
               autor: data.createdBy,
-              imagem: CAPA,
               descricao: data.course,
               conteudo: [{ titulo: "Conteúdo", paragrafos: data.body.split(/\n+/).filter(Boolean) }],
           }
@@ -82,13 +110,37 @@ export default function MaterialPage() {
     const isOwner = data !== null && myId !== null && data.userId === myId;
 
     if (loading) {
+        return <MaterialSkeleton />;
+    }
+
+    if (loadError) {
         return (
             <>
-                <Navbar />
-                <main className="min-h-screen bg-[#faf9ff]">
-                    <p role="status" className="py-24 text-center text-sm text-gray-500">
-                        Carregando material...
-                    </p>
+                <main className="min-h-[calc(100dvh-4rem)] bg-surface">
+                    <div role="alert" className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-5 text-center">
+                        <h1 className="text-2xl font-bold text-brand-ink">Não foi possível carregar o material</h1>
+                        <p className="mt-2 whitespace-pre-line text-sm text-gray-600">{loadError}</p>
+                        <div className="mt-6 flex gap-2">
+                            <button
+                                type="button"
+                                onClick={goBack}
+                                className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                            >
+                                Voltar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setLoading(true);
+                                    setLoadError(null);
+                                    setAttempt((current) => current + 1);
+                                }}
+                                className="rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-700"
+                            >
+                                Tentar novamente
+                            </button>
+                        </div>
+                    </div>
                 </main>
             </>
         );
@@ -97,9 +149,8 @@ export default function MaterialPage() {
     if (!material) {
         return (
             <>
-                <Navbar />
 
-                <main className="min-h-screen bg-[#faf9ff]">
+                <main className="min-h-[calc(100dvh-4rem)] bg-surface">
                     <div className="mx-auto flex min-h-[70vh] w-full max-w-[900px] items-center justify-center px-5">
                         <div className="text-center">
                             <div
@@ -118,12 +169,12 @@ export default function MaterialPage() {
                                 <FileText size={30} />
                             </div>
 
-                            <h1 className="mt-5 text-2xl font-bold text-[#171052]">
+                            <h1 className="mt-5 text-2xl font-bold text-brand-ink">
                                 Material não encontrado
                             </h1>
 
-                            <p className="mt-2 text-sm text-[#6875a0]">
-                                O material que você tentou acessar não existe.
+                            <p className="mt-2 text-sm text-gray-600">
+                                Ele pode ter sido removido pelo autor ou o link está incorreto.
                             </p>
 
                             <button
@@ -156,9 +207,8 @@ export default function MaterialPage() {
 
     return (
         <>
-            <Navbar />
 
-            <main className="min-h-screen bg-[#faf9ff]">
+            <main className="min-h-[calc(100dvh-4rem)] bg-surface">
 
                 <div className="mx-auto w-full max-w-[1200px] px-5 py-7 sm:px-8 lg:px-10">
 
@@ -167,7 +217,8 @@ export default function MaterialPage() {
                     ====================================================== */}
 
                     <button
-                        onClick={() => router.push("/explorar")}
+                        type="button"
+                        onClick={goBack}
                         className="
                             mb-6
                             flex
@@ -175,14 +226,14 @@ export default function MaterialPage() {
                             gap-2
                             text-sm
                             font-medium
-                            text-[#6875a0]
+                            text-gray-600
                             transition
                             hover:text-purple-700
                         "
                     >
                         <ArrowLeft size={18} />
 
-                        Voltar para explorar materiais
+                        Voltar
                     </button>
 
 
@@ -203,13 +254,7 @@ export default function MaterialPage() {
 
                         {/* Imagem */}
 
-                        <div className="relative h-[220px] sm:h-[280px]">
-
-                            <img
-                                src={material.imagem}
-                                alt={material.titulo}
-                                className="h-full w-full object-cover"
-                            />
+                        <SubjectCover subject={material.categoria} className="h-[220px] sm:h-[280px]">
 
                             <div
                                 className="
@@ -266,7 +311,7 @@ export default function MaterialPage() {
                                 </h1>
                             </div>
 
-                        </div>
+                        </SubjectCover>
 
 
                         {/* Informações */}
@@ -293,7 +338,7 @@ export default function MaterialPage() {
                                         items-center
                                         gap-2
                                         text-sm
-                                        text-[#6875a0]
+                                        text-gray-600
                                     "
                                 >
                                     <BookOpen
@@ -310,7 +355,7 @@ export default function MaterialPage() {
                                         items-center
                                         gap-2
                                         text-sm
-                                        text-[#6875a0]
+                                        text-gray-600
                                     "
                                 >
                                     <FileText
@@ -327,7 +372,7 @@ export default function MaterialPage() {
                                         items-center
                                         gap-2
                                         text-sm
-                                        text-[#6875a0]
+                                        text-gray-600
                                     "
                                 >
                                     <Clock3
@@ -347,8 +392,9 @@ export default function MaterialPage() {
 
                                 <button
                                     type="button"
-                                    disabled={files.length === 0}
-                                    onClick={() => downloadFile(files[0]).catch((error: Error) => alert(error.message))}
+                                    disabled={files.length === 0 || downloading !== null}
+                                    onClick={() => handleDownload("all")}
+                                    title={files.length === 0 ? "Este material não tem arquivos anexados" : undefined}
                                     className="
                                         flex
                                         items-center
@@ -369,11 +415,16 @@ export default function MaterialPage() {
                                 >
                                     <Download size={17} />
 
-                                    Baixar
+                                    {downloading === "all"
+                                        ? "Baixando..."
+                                        : files.length > 1
+                                            ? `Baixar ${files.length} arquivos`
+                                            : "Baixar"}
                                 </button>
 
                                 {isOwner && (
                                 <button
+                                    type="button"
                                     onClick={() => router.push(`/materiais/${material.id}/editar`)}
                                     className="
                                         flex
@@ -429,7 +480,7 @@ export default function MaterialPage() {
 
                             <div className="mb-8">
 
-                                <h2 className="text-xl font-bold text-[#171052]">
+                                <h2 className="text-xl font-bold text-brand-ink">
                                     Sobre este material
                                 </h2>
 
@@ -438,10 +489,10 @@ export default function MaterialPage() {
                                         mt-3
                                         text-sm
                                         leading-7
-                                        text-[#6875a0]
+                                        text-gray-600
                                     "
                                 >
-                                    {material.descricao}
+                                    Material do curso de {material.descricao}.
                                 </p>
 
                             </div>
@@ -464,7 +515,7 @@ export default function MaterialPage() {
                                             className="
                                                 text-lg
                                                 font-bold
-                                                text-[#171052]
+                                                text-brand-ink
                                                 sm:text-xl
                                             "
                                         >
@@ -481,7 +532,7 @@ export default function MaterialPage() {
                                                         className="
                                                             text-sm
                                                             leading-7
-                                                            text-[#59638f]
+                                                            text-gray-600
                                                             sm:text-base
                                                         "
                                                     >
@@ -502,7 +553,7 @@ export default function MaterialPage() {
                             {/* Comentários */}
 
                             <section className="mt-10 border-t border-gray-100 pt-8">
-                                <h2 className="text-lg font-bold text-[#171052]">
+                                <h2 className="text-lg font-bold text-brand-ink">
                                     Comentários ({comments.length})
                                 </h2>
 
@@ -525,22 +576,26 @@ export default function MaterialPage() {
                                     )}
                                     <button
                                         type="submit"
-                                        disabled={!newComment.trim()}
+                                        disabled={!newComment.trim() || sendingComment}
                                         className="mt-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
-                                        Comentar
+                                        {sendingComment ? "Enviando..." : "Comentar"}
                                     </button>
                                 </form>
+
+                                {comments.length === 0 && (
+                                    <p className="mt-6 text-sm text-gray-500">Ainda não há comentários. Tire uma dúvida ou deixe um agradecimento ao autor.</p>
+                                )}
 
                                 <ul className="mt-6 space-y-4">
                                     {comments.map((comment) => (
                                         <li key={comment.id} className="rounded-xl border border-gray-100 bg-white p-4">
-                                            <p className="text-xs text-[#8992b2]">
-                                                <span className="font-semibold text-[#303657]">{comment.createdBy}</span>
+                                            <p className="text-xs text-gray-500">
+                                                <span className="font-semibold text-gray-800">{comment.createdBy}</span>
                                                 {" · "}
                                                 {formatDate(comment.createdAt)}
                                             </p>
-                                            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#59638f]">
+                                            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-600">
                                                 {comment.body}
                                             </p>
                                         </li>
@@ -572,7 +627,7 @@ export default function MaterialPage() {
                                     className="
                                         text-sm
                                         font-bold
-                                        text-[#171052]
+                                        text-brand-ink
                                     "
                                 >
                                     Informações
@@ -582,44 +637,44 @@ export default function MaterialPage() {
                                 <div className="mt-5 space-y-4">
 
                                     <div>
-                                        <p className="text-xs text-[#8992b2]">
+                                        <p className="text-xs text-gray-500">
                                             Categoria
                                         </p>
 
-                                        <p className="mt-1 text-sm font-semibold text-[#303657]">
+                                        <p className="mt-1 text-sm font-semibold text-gray-800">
                                             {material.categoria}
                                         </p>
                                     </div>
 
 
                                     <div>
-                                        <p className="text-xs text-[#8992b2]">
+                                        <p className="text-xs text-gray-500">
                                             Autor
                                         </p>
 
-                                        <p className="mt-1 text-sm font-semibold text-[#303657]">
+                                        <p className="mt-1 text-sm font-semibold text-gray-800">
                                             {material.autor}
                                         </p>
                                     </div>
 
 
                                     <div>
-                                        <p className="text-xs text-[#8992b2]">
+                                        <p className="text-xs text-gray-500">
                                             Quantidade
                                         </p>
 
-                                        <p className="mt-1 text-sm font-semibold text-[#303657]">
+                                        <p className="mt-1 text-sm font-semibold text-gray-800">
                                             {material.paginas}
                                         </p>
                                     </div>
 
 
                                     <div>
-                                        <p className="text-xs text-[#8992b2]">
+                                        <p className="text-xs text-gray-500">
                                             Publicado
                                         </p>
 
-                                        <p className="mt-1 text-sm font-semibold text-[#303657]">
+                                        <p className="mt-1 text-sm font-semibold text-gray-800">
                                             {material.tempo}
                                         </p>
                                     </div>
@@ -647,7 +702,7 @@ export default function MaterialPage() {
                                     className="
                                         text-sm
                                         font-bold
-                                        text-[#171052]
+                                        text-brand-ink
                                     "
                                 >
                                     Arquivos
@@ -656,14 +711,16 @@ export default function MaterialPage() {
                                 <div className="mt-4 space-y-2">
 
                                     {files.length === 0 && (
-                                        <p className="px-3 text-xs text-[#8992b2]">Nenhum arquivo anexado.</p>
+                                        <p className="px-3 text-xs text-gray-500">Nenhum arquivo anexado.</p>
                                     )}
 
                                     {files.map((file) => (
                                         <button
                                             key={file.id}
                                             type="button"
-                                            onClick={() => downloadFile(file).catch((error: Error) => alert(error.message))}
+                                            onClick={() => handleDownload(file)}
+                                            disabled={downloading !== null}
+                                            aria-label={`Baixar ${file.name}`}
                                             className="
                                                 flex
                                                 w-full
@@ -674,14 +731,14 @@ export default function MaterialPage() {
                                                 py-2
                                                 text-left
                                                 text-xs
-                                                text-[#6875a0]
+                                                text-gray-600
                                                 transition
                                                 hover:bg-purple-50
                                                 hover:text-purple-700
                                             "
                                         >
                                             <Download size={13} className="shrink-0" />
-                                            <span className="truncate">{file.name}</span>
+                                            <span className="truncate">{downloading === file.id ? "Baixando..." : file.name}</span>
                                         </button>
                                     ))}
 
