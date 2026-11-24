@@ -66,7 +66,10 @@ export async function apiRequest(path: string, init: RequestInit = {}): Promise<
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${API_URL}${path}`, { ...init, headers });
+  // fetch só rejeita sem resposta (servidor fora do ar, sem internet): a mensagem nativa é "Failed to fetch"
+  const response = await fetch(`${API_URL}${path}`, { ...init, headers }).catch(() => {
+    throw new Error("Não foi possível conectar ao servidor. Verifique sua conexão e tente de novo.");
+  });
 
   // Token ausente/expirado: volta ao login (exceto na própria tela de login)
   if (response.status === 401 && token) {

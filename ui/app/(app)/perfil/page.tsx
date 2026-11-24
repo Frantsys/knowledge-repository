@@ -82,7 +82,20 @@ const EMPTY_PASSWORDS = { currentPassword: "", newPassword: "", confirmPassword:
 
 export default function PerfilPage() {
   // Mesmo cache da navbar (SWR): sem nova busca e sem mostrar dados vazios enquanto carrega
-  const { data: me } = useMe();
+  const { data: me, error, mutate } = useMe();
+
+  // Sem isso, uma falha no /me deixava o esqueleto na tela para sempre
+  if (!me && error) {
+    return (
+      <main role="alert" className="flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center bg-background px-6 text-center">
+        <h1 className="text-xl font-semibold text-brand-ink">Não foi possível carregar seu perfil</h1>
+        <p className="mt-2 max-w-sm whitespace-pre-line text-sm text-muted-foreground">{error.message}</p>
+        <Button size="lg" variant="outline" className="mt-5" onClick={() => mutate()}>
+          Tentar novamente
+        </Button>
+      </main>
+    );
+  }
 
   if (!me) {
     return <ProfileSkeleton />;

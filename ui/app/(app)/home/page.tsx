@@ -42,6 +42,19 @@ function SectionHeader({ title, subtitle, href, linkLabel }: { title: string; su
   );
 }
 
+// Falha ao carregar uma seção: não mostrar o estado vazio ("você ainda não publicou"), que seria falso
+function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div role="alert" className="flex flex-col items-center rounded-2xl border border-dashed bg-card px-6 py-10 text-center">
+      <p className="text-sm font-semibold">Não foi possível carregar esta seção</p>
+      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{message}</p>
+      <Button variant="outline" className="mt-4" onClick={onRetry}>
+        Tentar novamente
+      </Button>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -50,8 +63,8 @@ export default function HomePage() {
   // Dados em cache (SWR): voltar ao Início mostra o que já foi carregado e atualiza em segundo plano.
   // A lista de 100 é a mesma do Explorar: as sugestões da busca já deixam o Explorar pronto
   const { data: me } = useMe();
-  const { data: myPage, isLoading: loadingMine } = useMyMaterials(3);
-  const { data: allPage, isLoading: loadingAll } = useMaterials(100);
+  const { data: myPage, isLoading: loadingMine, error: mineError, mutate: retryMine } = useMyMaterials(3);
+  const { data: allPage, isLoading: loadingAll, error: allError, mutate: retryAll } = useMaterials(100);
 
   const all = useMemo(() => (allPage?.content ?? []).filter((material) => material.isActive), [allPage]);
   const mine = myPage?.content ?? [];
@@ -179,6 +192,8 @@ export default function HomePage() {
                 <MaterialCardSkeleton key={item} variant="cover" className={cn(item > 0 && "max-sm:hidden")} />
               ))}
             </SkeletonGroup>
+          ) : mineError && !myPage ? (
+            <LoadError message={mineError.message} onRetry={() => retryMine()} />
           ) : mine.length === 0 ? (
             <div className="flex flex-col items-center rounded-2xl border border-dashed bg-card px-6 py-10 text-center">
               <p className="text-sm font-semibold">Você ainda não publicou nenhum material</p>
@@ -215,6 +230,8 @@ export default function HomePage() {
                 <MaterialCardSkeleton key={item} />
               ))}
             </SkeletonGroup>
+          ) : allError && !allPage ? (
+            <LoadError message={allError.message} onRetry={() => retryAll()} />
           ) : recent.length === 0 ? (
             <p className="rounded-2xl border border-dashed bg-card px-6 py-10 text-center text-sm text-muted-foreground">
               Ainda não há materiais publicados. Que tal ser a primeira pessoa a compartilhar?
