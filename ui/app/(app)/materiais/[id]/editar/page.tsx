@@ -1,55 +1,52 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion } from "motion/react";
-import {
-  ArrowLeft,
-  Save,
-  Upload,
-  X,
-} from "lucide-react";
-import { getMaterial, updateMaterial, type Material } from "@/lib/api/materials";
-import { listFiles, uploadFile } from "@/lib/api/files";
-import { toast } from "@/components/toast";
-import EditSkeleton from "./edit-skeleton";
-import { ACCEPTED_FILES, ACCEPTED_FILES_HINT, MAX_FILE_BYTES, useEscapeKey } from "@/lib/hooks";
+import { mutate } from "swr";
+import { AlertCircle, ArrowLeft, FileText, Loader2, Save, Upload, X } from "lucide-react";
 
-const CATEGORIES = ["Direito", "Tecnologia", "Administração", "Engenharia", "Outros"];
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/toast";
+import { updateMaterial } from "@/lib/api/materials";
+import { uploadFile } from "@/lib/api/files";
+import { invalidateMaterials, keys, useFiles, useMaterial } from "@/lib/api/swr";
+import { ACCEPTED_FILES, ACCEPTED_FILES_HINT, MAX_FILE_BYTES, SUBJECTS, useEscapeKey } from "@/lib/hooks";
+import EditSkeleton from "./edit-skeleton";
 
 export default function EditarMaterialPage() {
   const router = useRouter();
   const params = useParams();
-
   const id = String(params.id);
 
-  const [material, setMaterial] = useState<Material | null>(null);
-  const [currentFileName, setCurrentFileName] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Vindo da página do material, os dados já estão em cache (SWR): o formulário abre sem esqueleto
+  const { data: material, isLoading: loading } = useMaterial(id);
+  const { data: filesPage } = useFiles(id);
+  const currentFileName = filesPage?.content[0]?.name ?? null;
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
-  // Esc sai da edição sem salvar (mesmo efeito do X)
+  // Esc sai da edição sem salvar (mesmo efeito do botão Cancelar)
   useEscapeKey(!saving, () => router.push(`/materiais/${id}`));
 
-  useEffect(() => {
-    Promise.all([
-      getMaterial(id).then((data) => {
-        setMaterial(data);
-        setTitle(data.title);
-        setDescription(data.body);
-        setCategory(data.subject);
-      }),
-      listFiles(id).then((page) => setCurrentFileName(page.content[0]?.name ?? null)),
-    ])
-      .catch(() => undefined)
-      .finally(() => setLoading(false));
-  }, [id]);
+  // Preenche o formulário uma única vez, quando o material chega (ajuste durante a renderização, sem efeito)
+  const [filledFrom, setFilledFrom] = useState<number | null>(null);
+  if (material && filledFrom !== material.id) {
+    setFilledFrom(material.id);
+    setTitle(material.title);
+    setDescription(material.body);
+    setCategory(material.subject);
+  }
 
   if (loading) {
     return <EditSkeleton />;
@@ -57,43 +54,31 @@ export default function EditarMaterialPage() {
 
   if (!material) {
     return (
-      <main className="min-h-[calc(100dvh-4rem)] bg-surface">
-        <div className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-3xl items-center justify-center px-6">
-          <div className="text-center">
-            <h1 className="text-xl font-semibold text-gray-900">
-              Material não encontrado
-            </h1>
-
-            <p className="mt-2 text-sm text-gray-500">
-              O material que você tentou editar não existe.
-            </p>
-
-            <button
-              onClick={() => router.push("/meusmateriais")}
-              className="
-                mt-5
-                rounded-lg
-                bg-purple-600
-                px-5
-                py-2.5
-                text-sm
-                font-medium
-                text-white
-                transition
-                hover:bg-purple-700
-              "
-            >
-              Voltar para meus materiais
-            </button>
-          </div>
+      <main className="flex min-h-[calc(100dvh-4rem)] items-center justify-center bg-background px-6">
+        <div className="text-center">
+          <h1 className="text-xl font-semibold">Material não encontrado</h1>
+          <p className="mt-2 text-sm text-muted-foreground">O material que você tentou editar não existe.</p>
+          <Button size="lg" className="mt-5" onClick={() => router.push("/meusmateriais")}>
+            Voltar para meus materiais
+          </Button>
         </div>
       </main>
     );
   }
 
+  function selectFile(selected: File | null) {
+    if (selected && selected.size > MAX_FILE_BYTES) {
+      setError("O arquivo passa de 10 MB. Escolha um arquivo menor.");
+      setFile(null);
+      return;
+    }
+
+    setError(null);
+    setFile(selected);
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-
     setSaving(true);
     setError(null);
 
@@ -107,8 +92,11 @@ export default function EditarMaterialPage() {
 
       if (file) {
         await uploadFile(id, file);
+        mutate(keys.files(id));
       }
 
+      // Página do material e listas mostram o título, a descrição e a disciplina novos
+      await invalidateMaterials();
       toast("Alterações salvas.");
       router.push(`/materiais/${id}`);
     } catch (err) {
@@ -118,466 +106,120 @@ export default function EditarMaterialPage() {
   }
 
   return (
-    <main className="min-h-[calc(100dvh-4rem)] bg-surface">
+    <main className="min-h-[calc(100dvh-4rem)] bg-background">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-
-        {/* ===========================================
-            VOLTAR
-        ============================================ */}
-
-        <button
-          type="button"
-          onClick={() => router.push(`/materiais/${id}`)}
-          className="
-            mb-5
-            flex
-            items-center
-            gap-2
-            text-sm
-            font-medium
-            text-gray-500
-            transition
-            hover:text-gray-800
-          "
-        >
-          <ArrowLeft size={17} />
-
+        <Button variant="ghost" onClick={() => router.push(`/materiais/${id}`)} className="mb-5 -ml-2 text-muted-foreground">
+          <ArrowLeft />
           Voltar para o material
-        </button>
+        </Button>
 
-        {/* ===========================================
-            CARD
-        ============================================ */}
+        <Card className="gap-0 overflow-hidden rounded-2xl py-0 animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
+          <form onSubmit={handleSubmit}>
+            <CardHeader className="border-b px-6 py-4">
+              <CardTitle className="text-base font-semibold">Editar material</CardTitle>
+              <CardDescription>Atualize as informações do seu material.</CardDescription>
+            </CardHeader>
 
-        <motion.form
-          onSubmit={handleSubmit}
-          initial={{
-            opacity: 0,
-            y: 10,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.2,
-          }}
-          className="
-            overflow-hidden
-            rounded-2xl
-            border
-            border-gray-200
-            bg-white
-            shadow-sm
-          "
-        >
-
-          {/* ===========================================
-              CABEÇALHO
-          ============================================ */}
-
-          <div
-            className="
-              flex
-              items-center
-              justify-between
-              border-b
-              border-gray-100
-              px-5
-              py-4
-              sm:px-6
-            "
-          >
-            <div>
-              <h2 className="text-base font-semibold text-gray-900">
-                Editar material
-              </h2>
-
-              <p className="mt-0.5 text-xs text-gray-500">
-                Atualize as informações do seu material.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                router.push(`/materiais/${id}`)
-              }
-              className="
-                flex
-                h-8
-                w-8
-                items-center
-                justify-center
-                rounded-md
-                text-gray-500
-                transition
-                hover:bg-gray-100
-                hover:text-gray-700
-              "
-              aria-label="Fechar"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* ===========================================
-              CONTEÚDO
-          ============================================ */}
-
-          <div className="space-y-5 p-5 sm:p-6">
-
-            {/* Título */}
-
-            <div>
-              <label
-                htmlFor="material-title"
-                className="
-                  mb-1.5
-                  block
-                  text-xs
-                  font-medium
-                  text-gray-700
-                "
-              >
-                Título
-              </label>
-
-              <input
-                id="material-title"
-                type="text"
-                value={title}
-                onChange={(event) =>
-                  setTitle(event.target.value)
-                }
-                placeholder="Ex.: Resumo de Direito Penal"
-                className="
-                  h-10
-                  w-full
-                  rounded-lg
-                  border
-                  border-gray-300
-                  bg-white
-                  px-3
-                  text-sm
-                  text-gray-900
-                  outline-none
-                  transition
-                  placeholder:text-gray-400
-                  focus:border-purple-500
-                  focus:ring-2
-                  focus:ring-purple-500/10
-                "
-              />
-            </div>
-
-            {/* Descrição */}
-
-            <div>
-              <label
-                htmlFor="material-description"
-                className="
-                  mb-1.5
-                  block
-                  text-xs
-                  font-medium
-                  text-gray-700
-                "
-              >
-                Descrição
-              </label>
-
-              <textarea
-                id="material-description"
-                rows={3}
-                value={description}
-                onChange={(event) =>
-                  setDescription(event.target.value)
-                }
-                placeholder="Descreva brevemente o material..."
-                className="
-                  w-full
-                  resize-none
-                  rounded-lg
-                  border
-                  border-gray-300
-                  bg-white
-                  px-3
-                  py-2.5
-                  text-sm
-                  text-gray-900
-                  outline-none
-                  transition
-                  placeholder:text-gray-400
-                  focus:border-purple-500
-                  focus:ring-2
-                  focus:ring-purple-500/10
-                "
-              />
-            </div>
-
-            {/* Categoria */}
-
-            <div>
-              <label
-                htmlFor="material-category"
-                className="
-                  mb-1.5
-                  block
-                  text-xs
-                  font-medium
-                  text-gray-700
-                "
-              >
-                Disciplina
-              </label>
-
-              <select
-                id="material-category"
-                value={category}
-                onChange={(event) =>
-                  setCategory(event.target.value)
-                }
-                className="
-                  h-10
-                  w-full
-                  rounded-lg
-                  border
-                  border-gray-300
-                  bg-white
-                  px-3
-                  text-sm
-                  text-gray-700
-                  outline-none
-                  transition
-                  focus:border-purple-500
-                  focus:ring-2
-                  focus:ring-purple-500/10
-                "
-              >
-                <option value="" disabled>
-                  Selecione uma disciplina
-                </option>
-
-                <option value="Direito">
-                  Direito
-                </option>
-
-                <option value="Tecnologia">
-                  Tecnologia
-                </option>
-
-                <option value="Administração">
-                  Administração
-                </option>
-
-                <option value="Engenharia">
-                  Engenharia
-                </option>
-
-                <option value="Outros">
-                  Outros
-                </option>
-
-                {category && !CATEGORIES.includes(category) && (
-                  <option value={category}>{category}</option>
-                )}
-              </select>
-            </div>
-
-            {/* Arquivo atual */}
-
-            <div>
-              <label
-                className="
-                  mb-1.5
-                  block
-                  text-xs
-                  font-medium
-                  text-gray-700
-                "
-              >
-                Arquivo
-              </label>
-
-              <div
-                className="
-                  mb-3
-                  flex
-                  items-center
-                  justify-between
-                  rounded-lg
-                  border
-                  border-gray-200
-                  bg-gray-50
-                  px-3
-                  py-2.5
-                "
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-medium text-gray-700">
-                    {file?.name ?? currentFileName ?? "Nenhum arquivo anexado"}
-                  </p>
-
-                  {!file && currentFileName && (
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      Arquivo atual
-                    </p>
-                  )}
-                </div>
+            <CardContent className="space-y-5 px-6 py-6">
+              <div className="space-y-2">
+                <Label htmlFor="material-title">Título</Label>
+                <Input
+                  id="material-title"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Ex.: Resumo de Direito Penal"
+                  className="h-10"
+                />
               </div>
 
-              <label
-                htmlFor="material-file"
-                className="
-                  flex
-                  cursor-pointer
-                  flex-col
-                  items-center
-                  justify-center
-                  rounded-xl
-                  border-2
-                  border-dashed
-                  border-gray-300
-                  px-5
-                  py-7
-                  text-center
-                  transition
-                  hover:border-purple-400
-                  hover:bg-purple-50/50
-                "
-              >
-                <div
-                  className="
-                    mb-2
-                    flex
-                    h-10
-                    w-10
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-purple-100
-                    text-purple-600
-                  "
-                >
-                  <Upload size={19} />
+              <div className="space-y-2">
+                <Label htmlFor="material-description">Descrição</Label>
+                <Textarea
+                  id="material-description"
+                  rows={3}
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Descreva brevemente o material..."
+                  className="min-h-20 resize-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="material-category">Disciplina</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger id="material-category" className="h-10 w-full">
+                    <SelectValue placeholder="Selecione uma disciplina" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUBJECTS.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Arquivo</p>
+
+                <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-3 py-2.5">
+                  <FileText className="size-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{file?.name ?? currentFileName ?? "Nenhum arquivo anexado"}</p>
+                    {!file && currentFileName && <p className="text-xs text-muted-foreground">Arquivo atual</p>}
+                  </div>
                 </div>
 
-                <p className="text-xs font-medium text-gray-700">
-                  {file ? file.name : "Clique para adicionar outro arquivo"}
-                </p>
-
-                <p className="mt-1 text-xs text-gray-500">
-                  {ACCEPTED_FILES_HINT}
-                </p>
-
-                <input
-                  id="material-file"
-                  type="file"
-                  accept={ACCEPTED_FILES}
-                  className="sr-only"
-                  onChange={(event) => {
-                    const selectedFile =
-                      event.target.files?.[0] ?? null;
-                    event.target.value = "";
-
-                    if (selectedFile && selectedFile.size > MAX_FILE_BYTES) {
-                      setError("O arquivo passa de 10 MB. Escolha um arquivo menor.");
-                      setFile(null);
-                      return;
-                    }
-
-                    setError(null);
-                    setFile(selectedFile);
-                  }}
-                />
-              </label>
-
-              {file && (
-                <button
-                  type="button"
-                  onClick={() => setFile(null)}
-                  className="mt-2 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-red-600"
+                <label
+                  htmlFor="material-file"
+                  className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-7 text-center transition-colors hover:border-primary/60 hover:bg-accent/50"
                 >
-                  <X size={14} />
-                  Remover arquivo selecionado
-                </button>
+                  <span className="mb-2 flex size-10 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                    <Upload className="size-5" />
+                  </span>
+                  {/* O upload adiciona um arquivo novo; o atual continua anexado */}
+                  <span className="text-sm font-medium">{file ? file.name : "Clique para adicionar outro arquivo"}</span>
+                  <span className="mt-1 text-xs text-muted-foreground">{ACCEPTED_FILES_HINT}</span>
+                  <input
+                    id="material-file"
+                    type="file"
+                    accept={ACCEPTED_FILES}
+                    className="sr-only"
+                    onChange={(event) => {
+                      selectFile(event.target.files?.[0] ?? null);
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+
+                {file && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setFile(null)} className="text-muted-foreground hover:text-destructive">
+                    <X />
+                    Remover arquivo selecionado
+                  </Button>
+                )}
+              </div>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle />
+                  <AlertDescription className="whitespace-pre-line">{error}</AlertDescription>
+                </Alert>
               )}
-            </div>
-          </div>
+            </CardContent>
 
-          {/* ===========================================
-              RODAPÉ
-          ============================================ */}
-
-          <div
-            className="
-              flex
-              flex-col-reverse
-              gap-2
-              border-t
-              border-gray-100
-              bg-gray-50/50
-              px-5
-              py-4
-              sm:flex-row
-              sm:justify-end
-              sm:px-6
-            "
-          >
-            <button
-              type="button"
-              onClick={() =>
-                router.push(`/materiais/${id}`)
-              }
-              className="
-                h-10
-                rounded-lg
-                px-4
-                text-xs
-                font-medium
-                text-gray-600
-                transition
-                hover:bg-gray-100
-              "
-            >
-              Cancelar
-            </button>
-
-            {error && (
-              <p role="alert" className="whitespace-pre-line text-xs text-red-600 sm:mr-auto">
-                {error}
-              </p>
-            )}
-
-            <motion.button
-              type="submit"
-              disabled={saving}
-              whileTap={{
-                scale: 0.97,
-              }}
-              className="
-                flex
-                h-10
-                items-center
-                justify-center
-                gap-2
-                rounded-lg
-                bg-purple-600
-                px-5
-                text-xs
-                font-medium
-                text-white
-                transition
-                hover:bg-purple-700
-              "
-            >
-              <Save size={15} />
-
-              {saving ? "Salvando..." : "Salvar alterações"}
-            </motion.button>
-          </div>
-        </motion.form>
+            <CardFooter className="flex-col-reverse gap-2 border-t bg-muted/50 px-6 py-4 sm:flex-row sm:justify-end">
+              <Button type="button" variant="ghost" size="lg" onClick={() => router.push(`/materiais/${id}`)}>
+                Cancelar
+              </Button>
+              <Button type="submit" size="lg" disabled={saving}>
+                {saving ? <Loader2 className="animate-spin" /> : <Save />}
+                {saving ? "Salvando..." : "Salvar alterações"}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
       </div>
     </main>
   );

@@ -1,1258 +1,583 @@
 "use client";
 
-
-import { useCallback, useEffect, useRef, useState } from "react";
-
-
+import { useRef, useState } from "react";
 import {
- User,
- Mail,
- GraduationCap,
- Phone,
- CreditCard,
- ShieldCheck,
- CalendarDays,
- MapPin,
- Pencil,
- X,
- Save,
- CheckCircle2,
- Lock,
- Eye,
- EyeOff,
- AlertCircle,
- ArrowUpRight,
- Sparkles,
- Camera,
- Loader2,
+  AlertCircle,
+  ArrowUpRight,
+  CalendarDays,
+  Camera,
+  CheckCircle2,
+  CreditCard,
+  GraduationCap,
+  Loader2,
+  Lock,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+  Save,
+  ShieldCheck,
+  User,
 } from "lucide-react";
 
-
-import { toast } from "@/components/toast";
-import { useEscapeKey } from "@/lib/hooks";
-import { maskPhone } from "@/lib/masks";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
- avatarSrc,
- changePassword,
- getMe,
- notifyProfileUpdated,
- removeAvatar,
- updateUser,
- uploadAvatar,
- type Address,
- type UserProfile as ApiUser,
-} from "@/lib/api/perfil";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import PasswordInput from "@/components/password-input";
+import { toast } from "@/components/toast";
+import UserAvatar from "@/components/user-avatar";
+import { changePassword, removeAvatar, updateUser, uploadAvatar, type UserProfile } from "@/lib/api/perfil";
+import { setMe, useMe } from "@/lib/api/swr";
+import { maskPhone } from "@/lib/masks";
+import ProfileSkeleton from "./profile-skeleton";
 
+const STATES: [string, string][] = [
+  ["AC", "Acre"], ["AL", "Alagoas"], ["AP", "Amapá"], ["AM", "Amazonas"], ["BA", "Bahia"], ["CE", "Ceará"],
+  ["DF", "Distrito Federal"], ["ES", "Espírito Santo"], ["GO", "Goiás"], ["MA", "Maranhão"], ["MT", "Mato Grosso"],
+  ["MS", "Mato Grosso do Sul"], ["MG", "Minas Gerais"], ["PA", "Pará"], ["PB", "Paraíba"], ["PR", "Paraná"],
+  ["PE", "Pernambuco"], ["PI", "Piauí"], ["RJ", "Rio de Janeiro"], ["RN", "Rio Grande do Norte"],
+  ["RS", "Rio Grande do Sul"], ["RO", "Rondônia"], ["RR", "Roraima"], ["SC", "Santa Catarina"], ["SP", "São Paulo"],
+  ["SE", "Sergipe"], ["TO", "Tocantins"],
+];
 
-type UserProfile = {
- id: number;
- cpf: string;
- firstName: string;
- lastName: string;
- email: string;
- phoneNumber: string;
- course: string;
- role: string;
- createdAt: string;
- isActive: boolean;
- city: string;
- state: string;
- profileImage: string | null;
-};
+const MIN_PASSWORD = 8;
 
-
-const initialUser: UserProfile = {
- id: 0,
- cpf: "",
- firstName: "",
- lastName: "",
- email: "",
- phoneNumber: "",
- course: "",
- role: "",
- createdAt: new Date().toISOString().slice(0, 10),
- isActive: true,
- city: "",
- state: "",
- profileImage: null,
-};
-
-
-// Adapta o UserResponse da API ao formato da tela (data sem hora, cidade/estado do endereço)
-function toProfile(api: ApiUser): UserProfile {
- return {
-   id: api.id,
-   cpf: api.cpf,
-   firstName: api.firstName,
-   lastName: api.lastName,
-   email: api.email,
-   phoneNumber: api.phoneNumber,
-   course: api.course,
-   role: api.role,
-   createdAt: api.createdAt.slice(0, 10),
-   isActive: api.isActive,
-   city: api.address?.city ?? "",
-   state: api.address?.state ?? "",
-   profileImage: avatarSrc(api),
- };
+function roleLabel(role: string) {
+  switch (role) {
+    case "ROLE_STUDENT":
+      return "Estudante";
+    case "ROLE_MODERATOR":
+      return "Moderador";
+    case "ROLE_ADMIN":
+      return "Administrador";
+    default:
+      return "Usuário";
+  }
 }
 
-
-function getRoleLabel(role: string) {
- switch (role) {
-   case "ROLE_STUDENT":
-     return "Estudante";
-
-
-   case "ROLE_MODERATOR":
-     return "Moderador";
-
-
-   case "ROLE_ADMIN":
-     return "Administrador";
-
-
-   default:
-     return "Usuário";
- }
+function formatDay(isoDate: string) {
+  return new Date(`${isoDate.slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR");
 }
 
+type ProfileForm = { firstName: string; lastName: string; phoneNumber: string; course: string; city: string; state: string };
+const EMPTY_PASSWORDS = { currentPassword: "", newPassword: "", confirmPassword: "" };
 
 export default function PerfilPage() {
- const [user, setUser] = useState<UserProfile>(initialUser);
- const [address, setAddress] = useState<Address | null>(null);
- const [saving, setSaving] = useState(false);
- const [avatarBusy, setAvatarBusy] = useState(false);
- const avatarInputRef = useRef<HTMLInputElement>(null);
+  // Mesmo cache da navbar (SWR): sem nova busca e sem mostrar dados vazios enquanto carrega
+  const { data: me } = useMe();
 
- // A foto é salva assim que escolhida (não espera o "Salvar" do modal): a API confere tipo e tamanho de novo
- async function handleAvatarSelected(event: React.ChangeEvent<HTMLInputElement>) {
-   const file = event.target.files?.[0];
-   event.target.value = "";
-   if (!file) return;
+  if (!me) {
+    return <ProfileSkeleton />;
+  }
 
-   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-     toast("Formato não suportado. Envie uma imagem JPG, PNG ou WEBP.", { type: "error" });
-     return;
-   }
-
-   if (file.size > 5 * 1024 * 1024) {
-     toast("A imagem deve ter no máximo 5 MB.", { type: "error" });
-     return;
-   }
-
-   setAvatarBusy(true);
-
-   try {
-     const updated = await uploadAvatar(file);
-     setUser(toProfile(updated));
-     notifyProfileUpdated(updated);
-     toast("Foto de perfil atualizada.");
-   } catch (error) {
-     toast(error instanceof Error ? error.message : "Não foi possível enviar a foto.", { type: "error" });
-   } finally {
-     setAvatarBusy(false);
-   }
- }
-
- async function handleAvatarRemove() {
-   setAvatarBusy(true);
-
-   try {
-     const updated = await removeAvatar();
-     setUser(toProfile(updated));
-     notifyProfileUpdated(updated);
-     toast("Foto de perfil removida.");
-   } catch (error) {
-     toast(error instanceof Error ? error.message : "Não foi possível remover a foto.", { type: "error" });
-   } finally {
-     setAvatarBusy(false);
-   }
- }
-
-
- useEffect(() => {
-   getMe()
-     .then((me) => {
-       setUser(toProfile(me));
-       setAddress(me.address);
-     })
-     .catch(() => undefined);
- }, []);
-
-
- const [editModalOpen, setEditModalOpen] = useState(false);
-
-
- const [formData, setFormData] = useState({
-   firstName: initialUser.firstName,
-   lastName: initialUser.lastName,
-   email: initialUser.email,
-   phoneNumber: initialUser.phoneNumber,
-   course: initialUser.course,
-   city: initialUser.city,
-   state: initialUser.state,
- });
-
-
-
-
- const [passwordModalOpen, setPasswordModalOpen] = useState(false);
-
-
- const [passwordData, setPasswordData] = useState({
-   currentPassword: "",
-   newPassword: "",
-   confirmPassword: "",
- });
-
-
- const [showCurrentPassword, setShowCurrentPassword] = useState(false);
- const [showNewPassword, setShowNewPassword] = useState(false);
- const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-
- const [passwordError, setPasswordError] = useState("");
- const [passwordSuccess, setPasswordSuccess] = useState(false);
-
-
- const closeEditModal = useCallback(() => setEditModalOpen(false), []);
- useEscapeKey(editModalOpen, closeEditModal);
-
- function handleOpenEdit() {
-   setFormData({
-     firstName: user.firstName,
-     lastName: user.lastName,
-     email: user.email,
-     phoneNumber: user.phoneNumber,
-     course: user.course,
-     city: user.city,
-     state: user.state,
-   });
-
-
-   setEditModalOpen(true);
- }
-
-
- function handleInputChange(
-   field: keyof typeof formData,
-   value: string
- ) {
-   setFormData((current) => ({
-     ...current,
-     [field]: value,
-   }));
- }
-
-
-
-
- async function handleSaveProfile() {
-   setSaving(true);
-
-   try {
-     const updated = await updateUser(user.id, {
-       firstName: formData.firstName.trim(),
-       lastName: formData.lastName.trim(),
-       phoneNumber: formData.phoneNumber.trim(),
-       course: formData.course.trim(),
-       address: address
-         ? { ...address, city: formData.city.trim(), state: formData.state.trim() }
-         : undefined,
-     });
-
-     setUser(toProfile(updated));
-     setAddress(updated.address);
-     notifyProfileUpdated(updated);
-     setEditModalOpen(false);
-     toast("Perfil atualizado.");
-   } catch (error) {
-     toast(error instanceof Error ? error.message : "Não foi possível salvar o perfil.", { type: "error" });
-   } finally {
-     setSaving(false);
-   }
- }
-
-
- function handleOpenPasswordModal() {
-   setPasswordData({
-     currentPassword: "",
-     newPassword: "",
-     confirmPassword: "",
-   });
-
-
-   setPasswordError("");
-   setPasswordSuccess(false);
-
-
-   setShowCurrentPassword(false);
-   setShowNewPassword(false);
-   setShowConfirmPassword(false);
-
-
-   setPasswordModalOpen(true);
- }
-
-
- function handlePasswordChange(
-   field: keyof typeof passwordData,
-   value: string
- ) {
-   setPasswordData((current) => ({
-     ...current,
-     [field]: value,
-   }));
-
-
-   setPasswordError("");
-   setPasswordSuccess(false);
- }
-
-
- async function handleChangePassword() {
-   setPasswordError("");
-   setPasswordSuccess(false);
-
-
-   if (!passwordData.currentPassword) {
-     setPasswordError("Informe sua senha atual.");
-     return;
-   }
-
-
-   if (!passwordData.newPassword) {
-     setPasswordError("Informe a nova senha.");
-     return;
-   }
-
-
-   if (passwordData.newPassword.length < 8) {
-     setPasswordError(
-       "A nova senha deve possuir pelo menos 8 caracteres."
-     );
-     return;
-   }
-
-
-   if (!passwordData.confirmPassword) {
-     setPasswordError("Confirme sua nova senha.");
-     return;
-   }
-
-
-   if (
-     passwordData.newPassword !==
-     passwordData.confirmPassword
-   ) {
-     setPasswordError(
-       "A nova senha e a confirmação não são iguais."
-     );
-     return;
-   }
-
-
-   /*
-    * API futuramente:
-    *
-    * await changePassword(token, {
-    *   currentPassword: passwordData.currentPassword,
-    *   newPassword: passwordData.newPassword,
-    * });
-    */
-
-
-   try {
-     await changePassword(passwordData.currentPassword, passwordData.newPassword);
-   } catch (error) {
-     setPasswordError(error instanceof Error ? error.message : "Não foi possível alterar a senha.");
-     return;
-   }
-
-
-   setPasswordSuccess(true);
-   setPasswordData({
-     currentPassword: "",
-     newPassword: "",
-     confirmPassword: "",
-   });
- }
-
-
- useEscapeKey(passwordModalOpen, () => handleClosePasswordModal());
-
- function handleClosePasswordModal() {
-   setPasswordModalOpen(false);
-
-
-   setPasswordData({
-     currentPassword: "",
-     newPassword: "",
-     confirmPassword: "",
-   });
-
-
-   setPasswordError("");
-   setPasswordSuccess(false);
- }
-
-
- const fullName = `${user.firstName} ${user.lastName}`;
-
-
- const initials = `${user.firstName.charAt(
-   0
- )}${user.lastName.charAt(0)}`.toUpperCase();
-
-
- return (
-   <div className="min-h-[calc(100dvh-4rem)] bg-surface text-gray-900">
-
-
-     <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
-       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-         <div>
-           <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-purple-700">
-             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100">
-               <User size={15} />
-             </span>
-             <span className="uppercase tracking-[0.16em]">
-               Minha conta
-             </span>
-           </div>
-
-
-           <h1 className="text-3xl font-bold tracking-tight text-gray-950 sm:text-4xl">
-             Meu perfil
-           </h1>
-
-
-           <p className="mt-2 max-w-xl text-sm leading-6 text-gray-500">
-             Gerencie suas informações pessoais e suas
-             preferências de segurança em um só lugar.
-           </p>
-         </div>
-
-
-         <div className="flex w-fit items-center gap-2 rounded-xl border border-purple-100 bg-white px-3.5 py-2.5 shadow-sm">
-           <span className="relative flex h-2.5 w-2.5">
-             <span
-               className={`absolute inline-flex h-full w-full rounded-full opacity-40 ${
-                 user.isActive ? "bg-emerald-500" : "bg-gray-400"
-               }`}
-             />
-             <span
-               className={`relative inline-flex h-2.5 w-2.5 rounded-full ${
-                 user.isActive ? "bg-emerald-500" : "bg-gray-400"
-               }`}
-             />
-           </span>
-           <span className="text-xs font-semibold text-gray-700">
-             {user.isActive ? "Conta ativa" : "Conta inativa"}
-           </span>
-         </div>
-       </div>
-
-
-       <section className="overflow-hidden rounded-3xl border border-gray-200/80 bg-white shadow-[0_8px_35px_-20px_rgba(55,35,100,0.24)]">
-         <div className="relative h-32 overflow-hidden bg-gradient-to-r from-[#32106f] via-[#6025b5] to-[#8b5cf6] sm:h-40">
-           <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-
-
-           <div className="absolute -right-12 -top-28 h-72 w-72 rounded-full border border-white/10" />
-           <div className="absolute -right-2 -top-16 h-52 w-52 rounded-full border border-white/10" />
-           <div className="absolute -bottom-32 left-[42%] h-64 w-64 rounded-full bg-white/[0.06]" />
-           <div className="absolute right-[30%] top-5 h-12 w-12 rounded-2xl border border-white/10 rotate-12" />
-
-
-           <div className="absolute left-6 top-5 flex items-center gap-2 text-xs font-medium text-white/80 sm:left-8 sm:top-7">
-             <Sparkles size={14} />
-             <span>Seu espaço pessoal</span>
-           </div>
-         </div>
-
-
-         <div className="relative px-5 pb-6 pt-0 sm:px-8 sm:pb-8">
-           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-             <div className="flex min-w-0 items-center gap-4 sm:gap-5">
-               <div className="-mt-12 shrink-0 sm:-mt-14">
-                 <div className="relative">
-                   <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border-4 border-white bg-gradient-to-br from-purple-500 to-indigo-700 text-2xl font-bold text-white shadow-lg shadow-purple-950/15 sm:h-32 sm:w-32 sm:text-3xl">
-                     {user.profileImage ? (
-                       // eslint-disable-next-line @next/next/no-img-element -- imagem servida pela API (outro host)
-                       <img src={user.profileImage} alt={`Foto de perfil de ${fullName}`} className="h-full w-full object-cover" />
-                     ) : (
-                       initials
-                     )}
-
-                     {avatarBusy && (
-                       <span role="status" aria-label="Salvando foto" className="absolute inset-1 flex items-center justify-center rounded-[1.25rem] bg-black/45">
-                         <Loader2 size={26} className="animate-spin text-white" aria-hidden="true" />
-                       </span>
-                     )}
-                   </div>
-
-                   <button
-                     type="button"
-                     onClick={() => avatarInputRef.current?.click()}
-                     disabled={avatarBusy}
-                     aria-label={user.profileImage ? "Trocar foto de perfil" : "Adicionar foto de perfil"}
-                     title={user.profileImage ? "Trocar foto" : "Adicionar foto"}
-                     className="absolute -bottom-1.5 -right-1.5 flex h-10 w-10 items-center justify-center rounded-2xl border-4 border-white bg-purple-600 text-white shadow-md transition hover:bg-purple-700 disabled:opacity-70"
-                   >
-                     <Camera size={16} />
-                   </button>
-
-                   <input
-                     ref={avatarInputRef}
-                     type="file"
-                     accept="image/jpeg,image/png,image/webp"
-                     onChange={handleAvatarSelected}
-                     className="sr-only"
-                     tabIndex={-1}
-                     aria-hidden="true"
-                   />
-                 </div>
-               </div>
-
-
-               <div className="min-w-0 flex-1 pb-1 pt-4 sm:pt-5">
-                 <div className="flex flex-wrap items-center gap-2.5">
-                   <h2 className="break-words text-xl font-bold tracking-tight text-gray-950 sm:text-2xl">
-                     {fullName}
-                   </h2>
-
-
-                   <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-100 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
-                     <ShieldCheck size={13} />
-                     {getRoleLabel(user.role)}
-                   </span>
-                 </div>
-
-
-                 <p className="mt-2 flex min-w-0 items-center gap-2 text-sm text-gray-500">
-                   <Mail size={15} className="shrink-0 text-purple-400" />
-                   <span className="truncate">{user.email}</span>
-                 </p>
-
-
-                 <p className="mt-2 text-xs text-gray-500">
-                   Membro desde{" "}
-                   {new Date(`${user.createdAt}T12:00:00`).toLocaleDateString(
-                     "pt-BR"
-                   )}
-                   {user.profileImage && (
-                     <>
-                       {" · "}
-                       <button
-                         type="button"
-                         onClick={handleAvatarRemove}
-                         disabled={avatarBusy}
-                         className="font-medium text-gray-600 underline-offset-2 hover:text-red-600 hover:underline disabled:opacity-60"
-                       >
-                         Remover foto
-                       </button>
-                     </>
-                   )}
-                 </p>
-               </div>
-             </div>
-             <button
-               type="button"
-               onClick={handleOpenEdit}
-               className="flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 text-sm font-semibold text-white shadow-sm shadow-purple-600/20 transition hover:-translate-y-0.5 hover:bg-purple-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 sm:w-auto"
-             >
-               <Pencil size={16} />
-               Editar perfil
-               <ArrowUpRight size={15} className="ml-1 text-purple-200" />
-             </button>
-           </div>
-         </div>
-       </section>
-
-
-       <div className="mt-7 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_310px]">
-         <section className="rounded-3xl border border-gray-200/80 bg-white p-5 shadow-[0_8px_35px_-24px_rgba(55,35,100,0.20)] sm:p-7">
-           <div className="mb-7 flex items-start justify-between gap-3">
-             <div>
-               <div className="flex items-center gap-2">
-                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-                   <User size={17} />
-                 </div>
-
-
-                 <h2 className="text-base font-bold text-gray-950 sm:text-lg">
-                   Informações pessoais
-                 </h2>
-               </div>
-
-
-               <p className="mt-2 text-sm text-gray-500">
-                 Confira os dados vinculados à sua conta.
-               </p>
-             </div>
-
-
-             <button
-               type="button"
-               onClick={handleOpenEdit}
-               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:border-purple-200 hover:bg-purple-50 hover:text-purple-600"
-               aria-label="Editar informações pessoais"
-             >
-               <Pencil size={15} />
-             </button>
-           </div>
-
-
-           <div className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
-             <ProfileInfo
-               icon={<User size={17} />}
-               label="Nome completo"
-               value={fullName}
-             />
-
-
-             <ProfileInfo
-               icon={<Mail size={17} />}
-               label="E-mail"
-               value={user.email}
-             />
-
-
-             <ProfileInfo
-               icon={<GraduationCap size={17} />}
-               label="Curso"
-               value={user.course}
-             />
-
-
-             <ProfileInfo
-               icon={<Phone size={17} />}
-               label="Telefone"
-               value={user.phoneNumber}
-             />
-
-
-             <ProfileInfo
-               icon={<CreditCard size={17} />}
-               label="CPF"
-               value={user.cpf}
-             />
-
-
-             <ProfileInfo
-               icon={<ShieldCheck size={17} />}
-               label="Tipo de usuário"
-               value={getRoleLabel(user.role)}
-             />
-
-
-             <ProfileInfo
-               icon={<MapPin size={17} />}
-               label="Localização"
-               value={`${user.city} - ${user.state}`}
-             />
-
-
-             <ProfileInfo
-               icon={<CalendarDays size={17} />}
-               label="Data de cadastro"
-               value={new Date(`${user.createdAt}T12:00:00`).toLocaleDateString(
-                 "pt-BR"
-               )}
-             />
-           </div>
-         </section>
-
-
-         <div className="space-y-5">
-           <section className="overflow-hidden rounded-3xl border border-gray-200/80 bg-white shadow-[0_8px_35px_-24px_rgba(55,35,100,0.20)]">
-             <div className="h-1 bg-gradient-to-r from-emerald-400 to-teal-500" />
-
-
-             <div className="p-5 sm:p-6">
-               <div className="flex items-start gap-3">
-                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-                   <CheckCircle2 size={20} />
-                 </div>
-
-
-                 <div className="min-w-0 flex-1 pt-0.5">
-                   <h2 className="text-sm font-bold text-gray-950">
-                     Status da conta
-                   </h2>
-
-
-                   <div className="mt-2 flex items-center gap-2">
-                     <span
-                       className={`h-2 w-2 rounded-full ${
-                         user.isActive ? "bg-emerald-500" : "bg-gray-400"
-                       }`}
-                     />
-
-
-                     <span
-                       className={`text-xs font-semibold ${
-                         user.isActive ? "text-emerald-700" : "text-gray-500"
-                       }`}
-                     >
-                       {user.isActive ? "Conta ativa" : "Conta inativa"}
-                     </span>
-                   </div>
-                 </div>
-               </div>
-
-
-               <p className="mt-5 text-xs leading-6 text-gray-500">
-                 {user.isActive
-                   ? "Sua conta está ativa e disponível para utilização na plataforma."
-                   : "Sua conta está inativa no momento. Entre em contato com o suporte caso precise de ajuda."}
-               </p>
-             </div>
-           </section>
-
-
-           <section className="overflow-hidden rounded-3xl border border-gray-200/80 bg-white shadow-[0_8px_35px_-24px_rgba(55,35,100,0.20)]">
-             <div className="h-1 bg-gradient-to-r from-purple-500 to-indigo-500" />
-
-
-             <div className="p-5 sm:p-6">
-               <div className="flex items-start gap-3">
-                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-purple-50 text-purple-600">
-                   <Lock size={19} />
-                 </div>
-
-
-                 <div className="pt-0.5">
-                   <h2 className="text-sm font-bold text-gray-950">
-                     Segurança
-                   </h2>
-
-
-                   <p className="mt-2 text-xs leading-5 text-gray-500">
-                     Mantenha suas credenciais protegidas e atualizadas.
-                   </p>
-                 </div>
-               </div>
-
-
-               <div className="my-5 border-t border-gray-100" />
-
-
-               <div className="mb-4 flex items-center gap-2 text-xs text-gray-500">
-                 <ShieldCheck size={15} className="text-purple-500" />
-                 <span>Proteção de acesso à conta</span>
-               </div>
-
-
-               <button
-                 type="button"
-                 onClick={handleOpenPasswordModal}
-                 className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-purple-200 bg-purple-50/60 px-4 text-sm font-semibold text-purple-700 transition hover:border-purple-300 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-               >
-                 <Lock size={15} />
-                 Alterar senha
-                 <ArrowUpRight size={15} className="ml-auto" />
-               </button>
-             </div>
-           </section>
-
-
-           <div className="rounded-2xl border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50/70 p-4">
-             <div className="flex items-start gap-3">
-               <div>
-                 <p className="text-xs font-semibold text-purple-900">
-                   Mantenha seus dados atualizados
-                 </p>
-
-
-                 <p className="mt-1 text-xs leading-5 text-purple-700/80">
-                   Informações corretas ajudam a manter seu cadastro organizado.
-                 </p>
-               </div>
-             </div>
-           </div>
-         </div>
-       </div>
-     </main>
-
-
-     {editModalOpen && (
-       <div
-         className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-950/50 p-3 backdrop-blur-sm sm:p-5"
-         onMouseDown={(event) => {
-           if (event.target === event.currentTarget) {
-             setEditModalOpen(false);
-           }
-         }}
-       >
-         <div
-           role="dialog"
-           aria-modal="true"
-           aria-labelledby="edit-profile-title"
-           className="w-full max-w-2xl overflow-hidden rounded-3xl border border-white/50 bg-white shadow-2xl shadow-gray-950/20"
-         >
-           <div className="flex items-center justify-between border-b border-gray-100 px-5 py-5 sm:px-7">
-             <div className="flex items-center gap-3">
-               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-purple-50 text-purple-600">
-                 <Pencil size={19} />
-               </div>
-
-
-               <div>
-                 <h2
-                   id="edit-profile-title"
-                   className="text-base font-bold text-gray-950"
-                 >
-                   Editar perfil
-                 </h2>
-
-
-                 <p className="mt-1 text-xs text-gray-500">
-                   Atualize suas informações pessoais.
-                 </p>
-               </div>
-             </div>
-
-
-             <button
-               type="button"
-               onClick={() => setEditModalOpen(false)}
-               className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
-               aria-label="Fechar"
-             >
-               <X size={19} />
-             </button>
-           </div>
-
-
-           <div className="max-h-[70vh] overflow-y-auto p-5 sm:p-7">
-
-
-             <div className="grid gap-5 sm:grid-cols-2">
-               <EditField
-                 label="Nome"
-                 value={formData.firstName}
-                 onChange={(value) =>
-                   handleInputChange("firstName", value)
-                 }
-               />
-
-
-               <EditField
-                 label="Sobrenome"
-                 value={formData.lastName}
-                 onChange={(value) =>
-                   handleInputChange("lastName", value)
-                 }
-               />
-
-
-               <EditField
-                 label="Telefone"
-                 value={formData.phoneNumber}
-                 onChange={(value) =>
-                   handleInputChange("phoneNumber", maskPhone(value))
-                 }
-               />
-
-
-               <div className="sm:col-span-2">
-                 <EditField
-                   label="Curso"
-                   value={formData.course}
-                   onChange={(value) =>
-                     handleInputChange("course", value)
-                   }
-                 />
-               </div>
-
-
-               <EditField
-                 label="Cidade"
-                 value={formData.city}
-                 onChange={(value) =>
-                   handleInputChange("city", value)
-                 }
-               />
-
-
-               <div>
-                 <label
-                   htmlFor="profile-state"
-                   className="mb-2 block text-xs font-semibold text-gray-700"
-                 >
-                   Estado
-                 </label>
-
-
-                 <select
-                   id="profile-state"
-                   value={formData.state}
-                   onChange={(event) =>
-                     handleInputChange("state", event.target.value)
-                   }
-                   className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition hover:border-gray-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10"
-                 >
-                   <option value="PB">Paraíba</option>
-                   <option value="PE">Pernambuco</option>
-                   <option value="RN">Rio Grande do Norte</option>
-                   <option value="CE">Ceará</option>
-                   <option value="BA">Bahia</option>
-                   <option value="SP">São Paulo</option>
-                   <option value="RJ">Rio de Janeiro</option>
-                 </select>
-               </div>
-
-
-               <div className="sm:col-span-2">
-                 <label className="mb-2 block text-xs font-semibold text-gray-700">
-                   CPF
-                 </label>
-
-
-                 <div className="flex h-11 items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3.5">
-                   <CreditCard size={16} className="text-gray-500" />
-
-
-                   <span className="text-sm font-medium text-gray-500">
-                     {user.cpf}
-                   </span>
-
-
-                   <span className="ml-auto rounded-lg bg-gray-200/70 px-2 py-1 text-xs font-semibold text-gray-500">
-                     Não editável
-                   </span>
-                 </div>
-               </div>
-             </div>
-           </div>
-
-
-           <div className="flex flex-col-reverse gap-2 border-t border-gray-100 bg-gray-50/70 px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
-             <button
-               type="button"
-               onClick={() => setEditModalOpen(false)}
-               className="h-11 rounded-xl px-5 text-sm font-semibold text-gray-600 transition hover:bg-gray-200/70"
-             >
-               Cancelar
-             </button>
-
-
-             <button
-               type="button"
-               onClick={handleSaveProfile}
-               disabled={saving}
-               className="flex h-11 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-             >
-               <Save size={16} />
-               Salvar alterações
-             </button>
-           </div>
-         </div>
-       </div>
-     )}
-
-
-     {passwordModalOpen && (
-       <div
-         className="fixed inset-0 z-[110] flex items-center justify-center bg-gray-950/50 p-3 backdrop-blur-sm sm:p-5"
-         onMouseDown={(event) => {
-           if (event.target === event.currentTarget) {
-             handleClosePasswordModal();
-           }
-         }}
-       >
-         <div
-           role="dialog"
-           aria-modal="true"
-           aria-labelledby="change-password-title"
-           className="w-full max-w-md overflow-hidden rounded-3xl border border-white/50 bg-white shadow-2xl shadow-gray-950/20"
-         >
-           <div className="flex items-center justify-between border-b border-gray-100 px-5 py-5 sm:px-6">
-             <div className="flex items-center gap-3">
-               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-purple-50 text-purple-600">
-                 <Lock size={19} />
-               </div>
-
-
-               <div>
-                 <h2
-                   id="change-password-title"
-                   className="text-base font-bold text-gray-950"
-                 >
-                   Alterar senha
-                 </h2>
-
-
-                 <p className="mt-1 text-xs text-gray-500">
-                   Atualize a senha da sua conta.
-                 </p>
-               </div>
-             </div>
-
-
-             <button
-               type="button"
-               onClick={handleClosePasswordModal}
-               className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
-               aria-label="Fechar"
-             >
-               <X size={19} />
-             </button>
-           </div>
-
-
-           <div className="p-5 sm:p-6">
-             {passwordSuccess && (
-               <div className="mb-5 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                 <CheckCircle2
-                   size={19}
-                   className="mt-0.5 shrink-0 text-emerald-600"
-                 />
-
-
-                 <div>
-                   <p className="text-sm font-semibold text-emerald-800">
-                     Senha alterada com sucesso!
-                   </p>
-
-
-                   <p className="mt-1 text-xs leading-5 text-emerald-700">
-                     A nova senha foi definida para sua conta.
-                   </p>
-                 </div>
-               </div>
-             )}
-
-
-             {passwordError && (
-               <div
-                 role="alert"
-                 className="mb-5 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4"
-               >
-                 <AlertCircle
-                   size={19}
-                   className="mt-0.5 shrink-0 text-red-600"
-                 />
-
-
-                 <p className="text-xs leading-5 text-red-700">
-                   {passwordError}
-                 </p>
-               </div>
-             )}
-
-
-             <div className="space-y-5">
-               <PasswordField
-                 id="current-password"
-                 label="Senha atual"
-                 value={passwordData.currentPassword}
-                 visible={showCurrentPassword}
-                 onChange={(value) =>
-                   handlePasswordChange("currentPassword", value)
-                 }
-                 onToggle={() =>
-                   setShowCurrentPassword((current) => !current)
-                 }
-               />
-
-
-               <PasswordField
-                 id="new-password"
-                 label="Nova senha"
-                 value={passwordData.newPassword}
-                 visible={showNewPassword}
-                 onChange={(value) =>
-                   handlePasswordChange("newPassword", value)
-                 }
-                 onToggle={() =>
-                   setShowNewPassword((current) => !current)
-                 }
-               />
-
-
-               <PasswordField
-                 id="confirm-password"
-                 label="Confirmar nova senha"
-                 value={passwordData.confirmPassword}
-                 visible={showConfirmPassword}
-                 onChange={(value) =>
-                   handlePasswordChange("confirmPassword", value)
-                 }
-                 onToggle={() =>
-                   setShowConfirmPassword((current) => !current)
-                 }
-               />
-
-
-               <div className="flex items-start gap-2 rounded-xl bg-gray-50 p-3.5">
-                 <ShieldCheck
-                   size={16}
-                   className="mt-0.5 shrink-0 text-purple-500"
-                 />
-
-
-                 <p className="text-xs leading-5 text-gray-500">
-                   A senha deve possuir pelo menos 6 caracteres.
-                   Escolha uma senha que você não utilize em outros serviços.
-                 </p>
-               </div>
-             </div>
-           </div>
-
-
-           <div className="flex flex-col-reverse gap-2 border-t border-gray-100 bg-gray-50/70 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
-             <button
-               type="button"
-               onClick={handleClosePasswordModal}
-               className="h-11 rounded-xl px-5 text-sm font-semibold text-gray-600 transition hover:bg-gray-200/70"
-             >
-               Cancelar
-             </button>
-
-
-             <button
-               type="button"
-               onClick={handleChangePassword}
-               disabled={passwordSuccess}
-               className="flex h-11 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
-             >
-               <Lock size={15} />
-               Alterar senha
-             </button>
-           </div>
-         </div>
-       </div>
-     )}
-   </div>
- );
+  return <Profile me={me} />;
 }
 
+function Profile({ me }: { me: UserProfile }) {
+  const fullName = `${me.firstName} ${me.lastName}`;
+  const location = [me.address?.city, me.address?.state].filter(Boolean).join(" - ");
 
-function ProfileInfo({
- icon,
- label,
- value,
-}: {
- icon: React.ReactNode;
- label: string;
- value: string;
-}) {
- return (
-   <div className="group flex min-w-0 items-start gap-3 rounded-2xl px-2 py-4 transition hover:bg-purple-50/50">
-     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-purple-100/80 bg-purple-50 text-purple-600 transition group-hover:bg-white">
-       {icon}
-     </div>
+  // Foto ---------------------------------------------------------------
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  // A foto é salva assim que escolhida: a API confere tipo e tamanho de novo
+  async function handleAvatarSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
 
-     <div className="min-w-0 flex-1 pt-0.5">
-       <p className="text-xs font-medium text-gray-500">
-         {label}
-       </p>
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast("Formato não suportado. Envie uma imagem JPG, PNG ou WEBP.", { type: "error" });
+      return;
+    }
 
+    if (file.size > 5 * 1024 * 1024) {
+      toast("A imagem deve ter no máximo 5 MB.", { type: "error" });
+      return;
+    }
 
-       <p className="mt-1.5 break-words text-sm font-semibold leading-5 text-gray-800">
-         {value || "Não informado"}
-       </p>
-     </div>
-   </div>
- );
+    setAvatarBusy(true);
+
+    try {
+      setMe(await uploadAvatar(file));
+      toast("Foto de perfil atualizada.");
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Não foi possível enviar a foto.", { type: "error" });
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
+  async function handleAvatarRemove() {
+    setAvatarBusy(true);
+
+    try {
+      setMe(await removeAvatar());
+      toast("Foto de perfil removida.");
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Não foi possível remover a foto.", { type: "error" });
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
+  // Editar perfil ------------------------------------------------------
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<ProfileForm>({ firstName: "", lastName: "", phoneNumber: "", course: "", city: "", state: "" });
+
+  function openEdit() {
+    setForm({
+      firstName: me.firstName,
+      lastName: me.lastName,
+      phoneNumber: me.phoneNumber,
+      course: me.course,
+      city: me.address?.city ?? "",
+      state: me.address?.state ?? "",
+    });
+    setEditOpen(true);
+  }
+
+  function updateField(field: keyof ProfileForm, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function handleSaveProfile(event: React.FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+
+    try {
+      const updated = await updateUser(me.id, {
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        phoneNumber: form.phoneNumber.trim(),
+        course: form.course.trim(),
+        address: me.address ? { ...me.address, city: form.city.trim(), state: form.state.trim() } : undefined,
+      });
+
+      setMe(updated);
+      setEditOpen(false);
+      toast("Perfil atualizado.");
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Não foi possível salvar o perfil.", { type: "error" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Alterar senha ------------------------------------------------------
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [passwords, setPasswords] = useState(EMPTY_PASSWORDS);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  function openPassword() {
+    setPasswords(EMPTY_PASSWORDS);
+    setPasswordError("");
+    setPasswordSuccess(false);
+    setPasswordOpen(true);
+  }
+
+  function updatePassword(field: keyof typeof EMPTY_PASSWORDS, value: string) {
+    setPasswords((current) => ({ ...current, [field]: value }));
+    setPasswordError("");
+    setPasswordSuccess(false);
+  }
+
+  async function handleChangePassword(event: React.FormEvent) {
+    event.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess(false);
+
+    if (!passwords.currentPassword) return setPasswordError("Informe sua senha atual.");
+    if (!passwords.newPassword) return setPasswordError("Informe a nova senha.");
+    if (passwords.newPassword.length < MIN_PASSWORD) return setPasswordError(`A nova senha deve ter pelo menos ${MIN_PASSWORD} caracteres.`);
+    if (passwords.newPassword !== passwords.confirmPassword) return setPasswordError("A nova senha e a confirmação não são iguais.");
+
+    setChangingPassword(true);
+
+    try {
+      await changePassword(passwords.currentPassword, passwords.newPassword);
+      setPasswordSuccess(true);
+      setPasswords(EMPTY_PASSWORDS);
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : "Não foi possível alterar a senha.");
+    } finally {
+      setChangingPassword(false);
+    }
+  }
+
+  const statusDot = me.isActive ? "bg-emerald-500" : "bg-muted-foreground";
+
+  return (
+    <div className="min-h-[calc(100dvh-4rem)] bg-background">
+      <main className="page-container pt-8 pb-16 lg:pt-10">
+        {/* Título */}
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-brand-ink sm:text-3xl">Meu perfil</h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+              Gerencie suas informações pessoais e a segurança da sua conta.
+            </p>
+          </div>
+
+          <Badge variant="outline" className="h-8 gap-2 rounded-full bg-card px-3 text-xs">
+            <span className={`size-2 rounded-full ${statusDot}`} />
+            {me.isActive ? "Conta ativa" : "Conta inativa"}
+          </Badge>
+        </div>
+
+        {/* Cartão de identidade */}
+        <Card className="gap-0 overflow-hidden rounded-3xl py-0">
+          <div aria-hidden="true" className="relative h-32 overflow-hidden bg-gradient-to-r from-[#32106f] via-[#6025b5] to-[#8b5cf6] sm:h-40">
+            <div className="absolute -right-12 -top-28 h-72 w-72 rounded-full border border-white/10" />
+            <div className="absolute -right-2 -top-16 h-52 w-52 rounded-full border border-white/10" />
+            <div className="absolute -bottom-32 left-[42%] h-64 w-64 rounded-full bg-white/[0.06]" />
+          </div>
+
+          <div className="relative flex flex-col gap-5 px-5 pb-6 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:pb-8">
+            <div className="flex min-w-0 items-center gap-4 sm:gap-5">
+              <div className="relative -mt-12 shrink-0 sm:-mt-14">
+                <UserAvatar
+                  avatarUrl={me.avatarUrl}
+                  name={me.firstName}
+                  className="size-24 rounded-3xl border-4 border-card text-2xl shadow-lg sm:size-32 sm:text-3xl [&_[data-slot=avatar-fallback]]:rounded-3xl [&_[data-slot=avatar-image]]:rounded-3xl"
+                  fallbackClassName="bg-gradient-to-br from-purple-500 to-indigo-700 text-white"
+                />
+
+                {avatarBusy && (
+                  <span role="status" aria-label="Salvando foto" className="absolute inset-1 flex items-center justify-center rounded-[1.25rem] bg-black/45">
+                    <Loader2 className="size-6 animate-spin text-white" aria-hidden="true" />
+                  </span>
+                )}
+
+                <Button
+                  type="button"
+                  size="icon-lg"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarBusy}
+                  aria-label={me.avatarUrl ? "Trocar foto de perfil" : "Adicionar foto de perfil"}
+                  title={me.avatarUrl ? "Trocar foto" : "Adicionar foto"}
+                  className="absolute -bottom-1.5 -right-1.5 size-10 rounded-2xl border-4 border-card shadow-md"
+                >
+                  <Camera />
+                </Button>
+
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleAvatarSelected}
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                />
+              </div>
+
+              <div className="min-w-0 flex-1 pt-4 sm:pt-5">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h2 className="break-words text-xl font-bold tracking-tight sm:text-2xl">{fullName}</h2>
+                  <Badge variant="secondary" className="gap-1.5 bg-accent text-accent-foreground">
+                    <ShieldCheck />
+                    {roleLabel(me.role)}
+                  </Badge>
+                </div>
+
+                <p className="mt-2 flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                  <Mail className="size-4 shrink-0" />
+                  <span className="truncate">{me.email}</span>
+                </p>
+
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Membro desde {formatDay(me.createdAt)}
+                  {me.avatarUrl && (
+                    <>
+                      {" · "}
+                      <Button
+                        type="button"
+                        variant="link"
+                        onClick={handleAvatarRemove}
+                        disabled={avatarBusy}
+                        className="h-auto p-0 text-xs font-medium text-muted-foreground hover:text-destructive"
+                      >
+                        Remover foto
+                      </Button>
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <Button size="lg" onClick={openEdit} className="h-11 w-full px-5 font-semibold sm:w-auto">
+              <Pencil />
+              Editar perfil
+            </Button>
+          </div>
+        </Card>
+
+        <div className="mt-7 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_310px]">
+          {/* Informações pessoais */}
+          <Card className="gap-0 rounded-3xl p-5 sm:p-7">
+            <div className="mb-5 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="flex items-center gap-2 text-base font-bold sm:text-lg">
+                  <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                    <User className="size-[18px]" />
+                  </span>
+                  Informações pessoais
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">Confira os dados vinculados à sua conta.</p>
+              </div>
+
+              <Button variant="outline" size="icon" onClick={openEdit} aria-label="Editar informações pessoais">
+                <Pencil />
+              </Button>
+            </div>
+
+            <div className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
+              <ProfileInfo icon={<User />} label="Nome completo" value={fullName} />
+              <ProfileInfo icon={<Mail />} label="E-mail" value={me.email} />
+              <ProfileInfo icon={<GraduationCap />} label="Curso" value={me.course} />
+              <ProfileInfo icon={<Phone />} label="Telefone" value={me.phoneNumber} />
+              <ProfileInfo icon={<CreditCard />} label="CPF" value={me.cpf} />
+              <ProfileInfo icon={<ShieldCheck />} label="Tipo de usuário" value={roleLabel(me.role)} />
+              <ProfileInfo icon={<MapPin />} label="Localização" value={location} />
+              <ProfileInfo icon={<CalendarDays />} label="Data de cadastro" value={formatDay(me.createdAt)} />
+            </div>
+          </Card>
+
+          {/* Lateral: status e segurança */}
+          <div className="space-y-5">
+            <Card className="gap-0 rounded-3xl p-5 sm:p-6">
+              <div className="flex items-start gap-3">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <h2 className="text-sm font-bold">Status da conta</h2>
+                  <p className="mt-2 flex items-center gap-2 text-xs font-semibold">
+                    <span className={`size-2 rounded-full ${statusDot}`} />
+                    {me.isActive ? "Conta ativa" : "Conta inativa"}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-5 text-xs leading-6 text-muted-foreground">
+                {me.isActive
+                  ? "Sua conta está ativa e disponível para uso na plataforma."
+                  : "Sua conta está inativa no momento. Entre em contato com o suporte caso precise de ajuda."}
+              </p>
+            </Card>
+
+            <Card className="gap-0 rounded-3xl p-5 sm:p-6">
+              <div className="flex items-start gap-3">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+                  <Lock className="size-5" />
+                </span>
+                <div className="pt-0.5">
+                  <h2 className="text-sm font-bold">Segurança</h2>
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">Mantenha sua senha protegida e atualizada.</p>
+                </div>
+              </div>
+
+              <Separator className="my-5" />
+
+              <Button variant="outline" size="lg" onClick={openPassword} className="h-11 w-full justify-start font-semibold text-primary hover:text-primary">
+                <Lock />
+                Alterar senha
+                <ArrowUpRight className="ml-auto" />
+              </Button>
+            </Card>
+          </div>
+        </div>
+      </main>
+
+      {/* Editar perfil */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="gap-0 p-0 sm:max-w-2xl">
+          <form onSubmit={handleSaveProfile}>
+            <DialogHeader className="border-b px-6 py-5">
+              <DialogTitle className="text-base font-bold">Editar perfil</DialogTitle>
+              <DialogDescription>Atualize suas informações pessoais.</DialogDescription>
+            </DialogHeader>
+
+            <div className="grid max-h-[65vh] gap-5 overflow-y-auto px-6 py-5 sm:grid-cols-2">
+              <EditField id="edit-first-name" label="Nome" value={form.firstName} onChange={(value) => updateField("firstName", value)} autoComplete="given-name" />
+              <EditField id="edit-last-name" label="Sobrenome" value={form.lastName} onChange={(value) => updateField("lastName", value)} autoComplete="family-name" />
+              <EditField
+                id="edit-phone"
+                label="Telefone"
+                value={form.phoneNumber}
+                onChange={(value) => updateField("phoneNumber", maskPhone(value))}
+                inputMode="numeric"
+                autoComplete="tel-national"
+              />
+              <EditField id="edit-course" label="Curso" value={form.course} onChange={(value) => updateField("course", value)} />
+              <EditField id="edit-city" label="Cidade" value={form.city} onChange={(value) => updateField("city", value)} autoComplete="address-level2" />
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-state">Estado</Label>
+                <Select value={form.state} onValueChange={(value) => updateField("state", value)}>
+                  <SelectTrigger id="edit-state" className="h-11 w-full">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATES.map(([uf, nome]) => (
+                      <SelectItem key={uf} value={uf}>
+                        {nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="edit-cpf">CPF</Label>
+                <div className="relative">
+                  <Input id="edit-cpf" value={me.cpf} disabled className="h-11 pr-28 tabular-nums" />
+                  <Badge variant="secondary" className="absolute right-2 top-1/2 -translate-y-1/2">
+                    Não editável
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="mx-0 mb-0 px-6 py-4">
+              <Button type="button" variant="ghost" size="lg" onClick={() => setEditOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" size="lg" disabled={saving}>
+                {saving ? <Loader2 className="animate-spin" /> : <Save />}
+                {saving ? "Salvando..." : "Salvar alterações"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Alterar senha */}
+      <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+        <DialogContent className="gap-0 p-0 sm:max-w-md">
+          <form onSubmit={handleChangePassword}>
+            <DialogHeader className="border-b px-6 py-5">
+              <DialogTitle className="text-base font-bold">Alterar senha</DialogTitle>
+              <DialogDescription>Atualize a senha da sua conta.</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-5 px-6 py-5">
+              {passwordSuccess && (
+                <Alert className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                  <CheckCircle2 />
+                  <AlertTitle>Senha alterada com sucesso!</AlertTitle>
+                  <AlertDescription className="text-current/80">A nova senha já vale para os próximos acessos.</AlertDescription>
+                </Alert>
+              )}
+
+              {passwordError && (
+                <Alert variant="destructive">
+                  <AlertCircle />
+                  <AlertDescription>{passwordError}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="current-password">Senha atual</Label>
+                <PasswordInput
+                  id="current-password"
+                  label="senha atual"
+                  value={passwords.currentPassword}
+                  onChange={(event) => updatePassword("currentPassword", event.target.value)}
+                  autoComplete="current-password"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="new-password">Nova senha</Label>
+                <PasswordInput
+                  id="new-password"
+                  label="nova senha"
+                  value={passwords.newPassword}
+                  onChange={(event) => updatePassword("newPassword", event.target.value)}
+                  autoComplete="new-password"
+                  aria-describedby="new-password-hint"
+                />
+                <p id="new-password-hint" className="text-xs text-muted-foreground">
+                  Mínimo de {MIN_PASSWORD} caracteres. Evite repetir senhas de outros serviços.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirmar nova senha</Label>
+                <PasswordInput
+                  id="confirm-password"
+                  label="confirmação da senha"
+                  value={passwords.confirmPassword}
+                  onChange={(event) => updatePassword("confirmPassword", event.target.value)}
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="mx-0 mb-0 px-6 py-4">
+              <Button type="button" variant="ghost" size="lg" onClick={() => setPasswordOpen(false)}>
+                {passwordSuccess ? "Fechar" : "Cancelar"}
+              </Button>
+              <Button type="submit" size="lg" disabled={changingPassword || passwordSuccess}>
+                {changingPassword ? <Loader2 className="animate-spin" /> : <Lock />}
+                {changingPassword ? "Alterando..." : "Alterar senha"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
 
-
-
+function ProfileInfo({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 items-start gap-3 rounded-2xl px-2 py-4 transition-colors hover:bg-muted/60">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-accent text-accent-foreground [&_svg]:size-[18px]">
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1 pt-0.5">
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        <p className="mt-1.5 break-words text-sm font-semibold leading-5">{value || "Não informado"}</p>
+      </div>
+    </div>
+  );
+}
 
 function EditField({
- label,
- value,
- onChange,
- type = "text",
+  id,
+  label,
+  value,
+  onChange,
+  ...props
 }: {
- label: string;
- value: string;
- onChange: (value: string) => void;
- type?: string;
-}) {
- const id = `edit-${label
-   .normalize("NFD")
-   .replace(/[\u0300-\u036f]/g, "")
-   .toLowerCase()
-   .replace(/[^a-z0-9]+/g, "-")}`;
-
-
- return (
-   <div>
-     <label
-       htmlFor={id}
-       className="mb-2 block text-xs font-semibold text-gray-700"
-     >
-       {label}
-     </label>
-
-
-     <input
-       id={id}
-       type={type}
-       value={value}
-       onChange={(event) => onChange(event.target.value)}
-       className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 hover:border-gray-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10"
-     />
-   </div>
- );
-}
-
-
-
-
-function PasswordField({
- id,
- label,
- value,
- visible,
- onChange,
- onToggle,
-}: {
- id: string;
- label: string;
- value: string;
- visible: boolean;
- onChange: (value: string) => void;
- onToggle: () => void;
-}) {
- return (
-   <div>
-     <label
-       htmlFor={id}
-       className="mb-2 block text-xs font-semibold text-gray-700"
-     >
-       {label}
-     </label>
-
-
-     <div className="relative">
-       <input
-         id={id}
-         type={visible ? "text" : "password"}
-         value={value}
-         onChange={(event) => onChange(event.target.value)}
-         className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3.5 pr-12 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 hover:border-gray-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10"
-         placeholder="Digite sua senha"
-         autoComplete="current-password"
-       />
-
-
-       <button
-         type="button"
-         onClick={onToggle}
-         className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-purple-50 hover:text-purple-600"
-         aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
-       >
-         {visible ? <EyeOff size={17} /> : <Eye size={17} />}
-       </button>
-     </div>
-   </div>
- );
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value">) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} value={value} onChange={(event) => onChange(event.target.value)} className="h-11" {...props} />
+    </div>
+  );
 }

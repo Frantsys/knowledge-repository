@@ -1,405 +1,327 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
-import LinkProgress from "@/components/link-progress";
-import { useRouter } from "next/navigation";
-import {
-    ArrowDownAZ,
-    ArrowRight,
-    BookOpen,
-    CalendarDays,
-    Check,
-    Filter,
-    Search,
-    SlidersHorizontal,
-    X,
-} from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { ArrowDownAZ, ArrowRight, BookOpen, CalendarDays, Filter, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 
-import { listMaterials, type Material } from "@/lib/api/materials";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import LinkProgress from "@/components/link-progress";
+import { Skeleton, SkeletonGroup } from "@/components/skeleton";
 import UserAvatar from "@/components/user-avatar";
+import { type Material } from "@/lib/api/materials";
+import { useMaterials } from "@/lib/api/swr";
+import { cn } from "@/lib/utils";
 
 function formatDate(date: string) {
-    return new Intl.DateTimeFormat("pt-BR", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-    }).format(new Date(date));
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(date));
 }
 
 export default function ExplorarPage() {
-    const router = useRouter();
+  // Termo vindo da busca da tela inicial (/explorar?q=...)
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
+  // Filtra enquanto digita: a lista é local, então a resposta é imediata; o valor adiado mantém o campo fluido
+  const query = useDeferredValue(search).trim();
+  const [selectedSubject, setSelectedSubject] = useState("Todas");
+  const [order, setOrder] = useState("recentes");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
-    const [search, setSearch] = useState("");
-    const [submittedSearch, setSubmittedSearch] = useState("");
-    const [selectedSubject, setSelectedSubject] = useState("Todas");
-    const [order, setOrder] = useState("recentes");
-    const [filtersOpen, setFiltersOpen] = useState(false);
+  // shortcut: busca/filtro no cliente sobre os 100 mais recentes; criar busca no servidor quando houver muitos materiais
+  const { data, error: loadError, isLoading: loading, mutate: retry } = useMaterials(100);
+  const materials: Material[] = useMemo(() => (data?.content ?? []).filter((material) => material.isActive), [data]);
 
-    const [materials, setMaterials] = useState<Material[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadError, setLoadError] = useState<string | null>(null);
+  const subjects = useMemo(() => ["Todas", ...new Set(materials.map((material) => material.subject))], [materials]);
 
-    // shortcut: busca/filtro no cliente sobre os 100 mais recentes; criar busca no servidor quando houver muitos materiais
-    useEffect(() => {
-        // Termo vindo da busca da tela inicial (/explorar?q=...)
-        const initialQuery = new URLSearchParams(window.location.search).get("q") ?? "";
-        listMaterials(100)
-            .then((page) => {
-                setMaterials(page.content.filter((material) => material.isActive));
-                setSearch(initialQuery);
-                setSubmittedSearch(initialQuery);
-            })
-            .catch((error: Error) => setLoadError(error.message))
-            .finally(() => setLoading(false));
-    }, []);
+  const filteredMaterials = useMemo(() => {
+    let result = [...materials];
 
-    const subjects = useMemo(
-        () => ["Todas", ...new Set(materials.map((material) => material.subject))],
-        [materials]
-    );
-
-    const filteredMaterials = useMemo(() => {
-        let result = [...materials];
-
-        if (selectedSubject !== "Todas") {
-            result = result.filter(
-                (material) => material.subject === selectedSubject
-            );
-        }
-
-        if (submittedSearch.trim()) {
-            const searchTerm = submittedSearch.trim().toLocaleLowerCase("pt-BR");
-
-            result = result.filter((material) =>
-                [
-                    material.title,
-                    material.body,
-                    material.subject,
-                    material.course,
-                    material.createdBy,
-                ].some((value) =>
-                    value.toLocaleLowerCase("pt-BR").includes(searchTerm)
-                )
-            );
-        }
-
-        if (order === "recentes") {
-            result.sort(
-                (a, b) =>
-                    new Date(b.createdAt).getTime() -
-                    new Date(a.createdAt).getTime()
-            );
-        } else if (order === "alfabetica") {
-            result.sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
-        }
-
-        return result;
-    }, [materials, submittedSearch, selectedSubject, order]);
-
-    const activeFiltersCount =
-        Number(selectedSubject !== "Todas") +
-        Number(order !== "recentes");
-
-    function handleSearch(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        setSubmittedSearch(search);
+    if (selectedSubject !== "Todas") {
+      result = result.filter((material) => material.subject === selectedSubject);
     }
 
-    function clearFilters() {
-        setSearch("");
-        setSubmittedSearch("");
-        setSelectedSubject("Todas");
-        setOrder("recentes");
+    if (query) {
+      const term = query.toLocaleLowerCase("pt-BR");
+      result = result.filter((material) =>
+        [material.title, material.body, material.subject, material.course, material.createdBy].some((value) =>
+          value.toLocaleLowerCase("pt-BR").includes(term)
+        )
+      );
     }
 
-    function openMaterial(id: number) {
-        router.push(`/materiais/${id}`);
+    if (order === "recentes") {
+      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } else if (order === "alfabetica") {
+      result.sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
     }
 
-    return (
-        <div className="min-h-[calc(100dvh-4rem)] bg-surface">
+    return result;
+  }, [materials, query, selectedSubject, order]);
 
-            <main className="mx-auto w-full max-w-[1250px] px-4 py-7 sm:px-6 sm:py-9 lg:px-10 lg:py-10">
-                <section className="relative mb-7 overflow-hidden rounded-2xl bg-gradient-to-r from-[#250080] via-purple-700 to-indigo-600 px-5 py-7 text-white shadow-sm sm:px-8 sm:py-9">
-                    <div className="pointer-events-none absolute -right-10 -top-20 h-56 w-56 rounded-full border border-white/10" />
-                    <div className="pointer-events-none absolute -bottom-28 right-1/4 h-64 w-64 rounded-full bg-white/5" />
+  const activeFiltersCount = Number(selectedSubject !== "Todas") + Number(order !== "recentes");
 
-                    <div className="relative max-w-2xl">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-purple-200">
-                            Biblioteca da comunidade
-                        </p>
-                        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                            Explore novos conhecimentos
-                        </h1>
-                        <p className="mt-2 max-w-xl text-sm leading-6 text-purple-100 sm:text-base">
-                            Encontre resumos, anotações e conteúdos compartilhados
-                            por estudantes para apoiar sua jornada acadêmica.
-                        </p>
+  // Mantém ?q= na URL (para voltar ou compartilhar a busca) sem navegar nem recarregar
+  function updateSearch(value: string) {
+    setSearch(value);
+    const url = value.trim() ? `?q=${encodeURIComponent(value.trim())}` : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }
+
+  // O resultado já acompanha a digitação; enviar só tira o foco (útil no teclado do celular)
+  function handleSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    (document.activeElement as HTMLElement | null)?.blur();
+  }
+
+  function clearFilters() {
+    updateSearch("");
+    setSelectedSubject("Todas");
+    setOrder("recentes");
+  }
+
+  return (
+    <div className="min-h-[calc(100dvh-4rem)] bg-background">
+      <main className="page-container pt-8 pb-16 lg:pt-10">
+        {/* Busca */}
+        <section className="relative mb-7 overflow-hidden rounded-2xl bg-gradient-to-r from-[#250080] via-purple-700 to-indigo-600 px-5 py-7 text-white shadow-sm sm:px-8 sm:py-9">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-20 h-56 w-56 rounded-full border border-white/10" />
+          <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 right-1/4 h-64 w-64 rounded-full bg-white/5" />
+
+          <div className="relative max-w-2xl">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Explore novos conhecimentos</h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-white/80 sm:text-base">
+              Encontre resumos, anotações e conteúdos compartilhados por estudantes para apoiar sua jornada acadêmica.
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleSearch}
+            role="search"
+            className="relative mt-6 flex max-w-3xl flex-col gap-2 rounded-xl bg-card p-2 text-card-foreground shadow-lg sm:flex-row"
+          >
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-primary" />
+              <Input
+                type="search"
+                value={search}
+                onChange={(event) => updateSearch(event.target.value)}
+                placeholder="Buscar por material, disciplina ou assunto..."
+                aria-label="Buscar materiais"
+                className="h-10 border-0 bg-transparent pl-10 shadow-none focus-visible:ring-0 dark:bg-transparent"
+              />
+            </div>
+            <Button type="submit" size="lg" className="h-10 px-5 font-semibold">
+              <Search />
+              Buscar materiais
+            </Button>
+          </form>
+        </section>
+
+        {/* Barra: filtros (celular) e ordenação */}
+        <div className="mb-5 flex items-center justify-between gap-3 lg:justify-end">
+          <Button
+            variant="outline"
+            onClick={() => setFiltersOpen(true)}
+            aria-controls="explorar-filtros"
+            aria-expanded={filtersOpen}
+            className="h-10 lg:hidden"
+          >
+            <SlidersHorizontal />
+            Filtros
+            {activeFiltersCount > 0 && <Badge className="ml-0.5 h-5 min-w-5 px-1.5">{activeFiltersCount}</Badge>}
+          </Button>
+
+          <div className="flex items-center gap-2">
+            <Label htmlFor="ordenar" className="hidden text-sm font-normal text-muted-foreground sm:flex">
+              <ArrowDownAZ className="size-4 text-primary" />
+              Ordenar:
+            </Label>
+            <Select value={order} onValueChange={setOrder}>
+              <SelectTrigger id="ordenar" aria-label="Ordenar materiais" className="h-10 min-w-44 bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value="recentes">Mais recentes</SelectItem>
+                <SelectItem value="alfabetica">Ordem alfabética</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid items-start gap-5 lg:grid-cols-[250px_minmax(0,1fr)]">
+          {/* Filtros */}
+          <Card
+            id="explorar-filtros"
+            className={cn("gap-0 rounded-2xl p-5 lg:sticky lg:top-5 lg:flex", filtersOpen ? "flex" : "hidden")}
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex size-9 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                  <Filter className="size-4" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold">Filtrar materiais</h2>
+                  <p className="text-xs text-muted-foreground">Refine sua busca</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon-sm" onClick={() => setFiltersOpen(false)} aria-label="Fechar filtros" className="lg:hidden">
+                <X />
+              </Button>
+            </div>
+
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="subject" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Disciplina
+                </Label>
+                <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                  <SelectTrigger id="subject" className="h-10 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((subject) => (
+                      <SelectItem key={subject} value={subject}>
+                        {subject}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="rounded-xl bg-muted p-3.5">
+                <p className="text-xs font-semibold">Dica de pesquisa</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">Você também pode buscar pelo nome do autor ou pelo curso.</p>
+              </div>
+
+              <Button variant="outline" onClick={clearFilters} className="h-10 w-full">
+                <X />
+                Limpar filtros
+              </Button>
+            </div>
+          </Card>
+
+          {/* Resultados */}
+          <section aria-label="Resultados dos materiais">
+            {!loading && !loadError && (
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <p role="status" className="text-sm text-muted-foreground">
+                  <span className="font-semibold text-foreground">{filteredMaterials.length}</span>{" "}
+                  {filteredMaterials.length === 1 ? "material encontrado" : "materiais encontrados"}
+                  {query && (
+                    <>
+                      {" "}para <span className="font-medium text-primary">“{query}”</span>
+                    </>
+                  )}
+                </p>
+
+                {(selectedSubject !== "Todas" || query) && (
+                  <Button variant="link" size="sm" onClick={clearFilters} className="h-auto px-0 text-xs font-semibold">
+                    Limpar busca e filtros
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {loading ? (
+              <SkeletonGroup label="Carregando materiais" className="grid gap-4 md:grid-cols-2">
+                {[0, 1, 2, 3].map((item) => (
+                  <div key={item} className="flex min-h-[255px] flex-col rounded-2xl border bg-card p-5">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="size-11 rounded-xl" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-5 w-20" />
+                        <Skeleton className="h-3 w-28" />
+                      </div>
+                    </div>
+                    <Skeleton className="mt-5 h-5 w-3/4" />
+                    <Skeleton className="mt-3 h-4 w-full" />
+                    <Skeleton className="mt-2 h-4 w-2/3" />
+                    <div className="mt-auto flex items-center gap-2.5 border-t pt-4">
+                      <Skeleton className="size-8 rounded-full" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </div>
+                ))}
+              </SkeletonGroup>
+            ) : loadError ? (
+              <Card role="alert" className="items-center rounded-2xl px-5 py-14 text-center">
+                <p className="whitespace-pre-line text-sm text-destructive">{loadError.message}</p>
+                <Button variant="outline" onClick={() => retry()}>
+                  <RotateCcw />
+                  Tentar novamente
+                </Button>
+              </Card>
+            ) : filteredMaterials.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {filteredMaterials.map((material) => (
+                  <Link
+                    key={material.id}
+                    href={`/materiais/${material.id}`}
+                    transitionTypes={["nav-forward"]}
+                    className="group flex min-h-[255px] flex-col rounded-2xl border bg-card p-5 text-card-foreground shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-primary/40 hover:shadow-md"
+                  >
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                          <BookOpen className="size-5" />
+                        </span>
+                        <div className="min-w-0">
+                          <Badge variant="secondary" className="max-w-full bg-accent text-accent-foreground">
+                            <span className="truncate">{material.subject}</span>
+                          </Badge>
+                          <p className="mt-1 truncate text-xs text-muted-foreground">{material.course}</p>
+                        </div>
+                      </div>
+                      <ArrowRight className="mt-1 size-[18px] shrink-0 text-muted-foreground/60 transition group-hover:translate-x-0.5 group-hover:text-primary" />
                     </div>
 
-                    {/* A busca filtra os dados locais neste momento.
-                        Na integração, encaminhar o termo à API se houver busca no servidor. */}
-                    <form
-                        onSubmit={handleSearch}
-                        className="relative mt-6 flex max-w-3xl flex-col gap-2 rounded-xl bg-white p-2 shadow-lg sm:flex-row"
-                        role="search"
-                    >
-                        <div className="flex min-w-0 flex-1 items-center gap-3 px-2">
-                            <Search size={19} className="shrink-0 text-purple-500" />
-                            <input
-                                type="search"
-                                value={search}
-                                onChange={(event) => setSearch(event.target.value)}
-                                placeholder="Buscar por material, disciplina ou assunto..."
-                                aria-label="Buscar materiais"
-                                className="h-10 min-w-0 flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400"
-                            />
+                    <h3 className="mb-2 line-clamp-2 text-base font-bold leading-snug">{material.title}</h3>
+                    <p className="mb-5 line-clamp-3 flex-1 text-sm leading-6 text-muted-foreground">{material.body}</p>
+
+                    <div className="mt-auto flex items-end justify-between gap-3 border-t pt-4">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <UserAvatar
+                          avatarUrl={material.user?.avatarUrl}
+                          name={material.createdBy}
+                          className="size-8 text-xs"
+                          fallbackClassName="bg-accent text-accent-foreground"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Compartilhado por</p>
+                          <p className="mt-0.5 truncate text-xs font-semibold">{material.createdBy}</p>
                         </div>
-                        <button
-                            type="submit"
-                            className="flex h-10 items-center justify-center gap-2 rounded-lg bg-purple-600 px-5 text-sm font-semibold text-white transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
-                        >
-                            <Search size={16} />
-                            Buscar materiais
-                        </button>
-                    </form>
-                </section>
-
-                <div className="mb-5 flex items-center justify-between gap-3 lg:justify-end">
-                    <button
-                        type="button"
-                        onClick={() => setFiltersOpen(true)}
-                        aria-controls="explorar-filtros"
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-purple-200 hover:bg-purple-50 hover:text-purple-700 lg:hidden"
-                    >
-                        <SlidersHorizontal size={16} />
-                        Filtros
-                        {activeFiltersCount > 0 && (
-                            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-purple-100 px-1.5 text-xs font-semibold text-purple-700">
-                                {activeFiltersCount}
-                            </span>
-                        )}
-                    </button>
-
-                    <label className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-500 shadow-sm">
-                        <ArrowDownAZ size={16} className="shrink-0 text-purple-500" />
-                        <span className="hidden sm:inline">Ordenar:</span>
-                        <select
-                            value={order}
-                            onChange={(event) => setOrder(event.target.value)}
-                            aria-label="Ordenar materiais"
-                            className="max-w-[150px] bg-transparent font-medium text-gray-700 outline-none"
-                        >
-                            <option value="recentes">Mais recentes</option>
-                            <option value="alfabetica">Ordem alfabética</option>
-                        </select>
-                    </label>
-                </div>
-
-                <div className="grid items-start gap-5 lg:grid-cols-[250px_minmax(0,1fr)]">
-                    <aside
-                        id="explorar-filtros"
-                        className={`${filtersOpen ? "block" : "hidden"} rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:sticky lg:top-5 lg:block`}
-                    >
-                        <div className="mb-5 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
-                                    <Filter size={17} />
-                                </div>
-                                <div>
-                                    <h2 className="text-sm font-semibold text-gray-900">
-                                        Filtrar materiais
-                                    </h2>
-                                    <p className="text-xs text-gray-500">
-                                        Refine sua busca
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setFiltersOpen(false)}
-                                aria-label="Fechar filtros"
-                                className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 lg:hidden"
-                            >
-                                <X size={17} />
-                            </button>
-                        </div>
-
-                        <div className="space-y-5">
-                            <div>
-                                <label
-                                    htmlFor="subject"
-                                    className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
-                                >
-                                    Disciplina
-                                </label>
-                                <select
-                                    id="subject"
-                                    value={selectedSubject}
-                                    onChange={(event) => setSelectedSubject(event.target.value)}
-                                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10"
-                                >
-                                    {subjects.map((subject) => (
-                                        <option key={subject} value={subject}>
-                                            {subject}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="rounded-xl bg-surface p-3.5">
-                                <p className="text-xs font-semibold text-gray-700">
-                                    Dica de pesquisa
-                                </p>
-                                <p className="mt-1 text-xs leading-5 text-gray-500">
-                                    Você também pode buscar pelo nome do autor ou pelo curso.
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={clearFilters}
-                                className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-600 transition hover:border-purple-200 hover:bg-purple-50 hover:text-purple-700"
-                            >
-                                <X size={15} />
-                                Limpar filtros
-                            </button>
-                        </div>
-                    </aside>
-
-                    <section aria-live="polite" aria-label="Resultados dos materiais">
-                        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm text-gray-500">
-                                <span className="font-semibold text-gray-800">
-                                    {filteredMaterials.length}
-                                </span>{" "}
-                                {filteredMaterials.length === 1
-                                    ? "material encontrado"
-                                    : "materiais encontrados"}
-                                {submittedSearch && (
-                                    <span>
-                                        {" "}para{" "}
-                                        <span className="font-medium text-purple-700">
-                                            “{submittedSearch}”
-                                        </span>
-                                    </span>
-                                )}
-                            </p>
-
-                            {(selectedSubject !== "Todas" || submittedSearch) && (
-                                <button
-                                    type="button"
-                                    onClick={clearFilters}
-                                    className="text-xs font-semibold text-purple-600 transition hover:text-purple-800"
-                                >
-                                    Limpar busca e filtros
-                                </button>
-                            )}
-                        </div>
-
-                        {loading || loadError ? (
-                            <p
-                                role={loadError ? "alert" : "status"}
-                                className={`rounded-2xl border border-gray-200 bg-white px-5 py-14 text-center text-sm shadow-sm ${loadError ? "text-red-600" : "text-gray-500"}`}
-                            >
-                                {loadError ?? "Carregando materiais..."}
-                            </p>
-                        ) : filteredMaterials.length > 0 ? (
-                            <div className="grid gap-4 md:grid-cols-2">
-                                {filteredMaterials.map((material) => (
-                                    <Link
-                                        key={material.id}
-                                        href={`/materiais/${material.id}`}
-                                        transitionTypes={["nav-forward"]}
-                                        className="group flex min-h-[255px] flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                                    >
-                                        <div className="mb-4 flex items-start justify-between gap-3">
-                                            <div className="flex min-w-0 items-center gap-3">
-                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600 transition group-hover:bg-purple-100">
-                                                    <BookOpen size={20} />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <span className="inline-flex max-w-full items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-semibold text-purple-700">
-                                                        <span className="truncate">{material.subject}</span>
-                                                    </span>
-                                                    <p className="mt-1 truncate text-xs text-gray-500">
-                                                        {material.course}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <ArrowRight
-                                                size={17}
-                                                className="mt-1 shrink-0 text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-purple-600"
-                                            />
-                                        </div>
-
-                                        <h3 className="mb-2 line-clamp-2 text-base font-bold leading-snug text-gray-900 transition group-hover:text-brand-ink">
-                                            {material.title}
-                                        </h3>
-                                        <p className="mb-5 line-clamp-3 flex-1 text-sm leading-6 text-gray-500">
-                                            {material.body}
-                                        </p>
-
-                                        {/* AUTOR E DATA
-                                            Futuramente, vincular o autor ao perfil público
-                                            usando o ID retornado pela API. */}
-                                        <div className="mt-auto flex items-end justify-between gap-3 border-t border-gray-100 pt-4">
-                                            <div className="flex min-w-0 items-center gap-2.5">
-                                                <UserAvatar
-                                                    avatarUrl={material.user?.avatarUrl}
-                                                    name={material.createdBy}
-                                                    className="h-8 w-8 rounded-full text-xs"
-                                                    fallbackClassName="bg-purple-100 text-purple-700"
-                                                />
-                                                <div className="min-w-0">
-                                                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                                    Compartilhado por
-                                                </p>
-                                                <p className="mt-0.5 truncate text-xs font-semibold text-gray-700">
-                                                    {material.createdBy}
-                                                </p>
-                                                </div>
-                                            </div>
-                                            <span className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500">
-                                                <CalendarDays size={13} />
-                                                {formatDate(material.createdAt)}
-                                            </span>
-                                        </div>
-                                      <LinkProgress />
-                                    </Link>
-                                ))}
-                            </div>
-                        ) : (
-                            /* =================================================
-                               ESTADO VAZIO
-                               Na integração com a API, diferenciar lista vazia
-                               de falha de carregamento ou ausência de conexão.
-                            ================================================== */
-                            <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-5 py-14 text-center shadow-sm sm:px-8">
-                                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-50 text-purple-500">
-                                    <BookOpen size={25} />
-                                </div>
-                                <h2 className="text-base font-semibold text-gray-900">
-                                    Nenhum material encontrado
-                                </h2>
-                                <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-500">
-                                    Não encontramos materiais com esses critérios.
-                                    Experimente outro termo ou remova os filtros.
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={clearFilters}
-                                    className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 text-sm font-semibold text-white transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                                >
-                                    <Check size={16} />
-                                    Ver todos os materiais
-                                </button>
-                            </div>
-                        )}
-                    </section>
-                </div>
-            </main>
+                      </div>
+                      <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+                        <CalendarDays className="size-3.5" />
+                        {formatDate(material.createdAt)}
+                      </span>
+                    </div>
+                    <LinkProgress />
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed bg-card px-5 py-14 text-center sm:px-8">
+                <span className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+                  <BookOpen className="size-6" />
+                </span>
+                <h2 className="text-base font-semibold">Nenhum material encontrado</h2>
+                <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+                  Não encontramos materiais com esses critérios. Experimente outro termo ou remova os filtros.
+                </p>
+                <Button className="mt-5" size="lg" onClick={clearFilters}>
+                  Ver todos os materiais
+                </Button>
+              </div>
+            )}
+          </section>
         </div>
-    );
+      </main>
+    </div>
+  );
 }
