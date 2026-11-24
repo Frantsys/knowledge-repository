@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/components/toast";
 import { updateMaterial } from "@/lib/api/materials";
 import { setFileActive, uploadFile } from "@/lib/api/files";
-import { invalidateMaterials, keys, useFiles, useMaterial } from "@/lib/api/swr";
+import { invalidateMaterials, keys, useFiles, useMaterial, useMe } from "@/lib/api/swr";
 import { ACCEPTED_FILES, ACCEPTED_FILES_HINT, MAX_FILE_BYTES, SUBJECTS, useEscapeKey } from "@/lib/hooks";
 import EditSkeleton from "./edit-skeleton";
 
@@ -28,6 +28,7 @@ export default function EditarMaterialPage() {
   // Vindo da página do material, os dados já estão em cache (SWR): o formulário abre sem esqueleto
   const { data: material, isLoading: loading } = useMaterial(id);
   const { data: filesPage } = useFiles(id);
+  const { data: me } = useMe();
   const currentFiles = filesPage?.content ?? [];
 
   const [saving, setSaving] = useState(false);
@@ -63,6 +64,21 @@ export default function EditarMaterialPage() {
           <p className="mt-2 text-sm text-muted-foreground">O material que você tentou editar não existe.</p>
           <Button size="lg" className="mt-5" onClick={() => router.push("/meusmateriais")}>
             Voltar para meus materiais
+          </Button>
+        </div>
+      </main>
+    );
+  }
+
+  // Pelo link, outra pessoa chegaria ao formulário e só veria o erro ao salvar (a API recusa com 403)
+  if (me && material.userId !== me.id) {
+    return (
+      <main className="flex min-h-[calc(100dvh-4rem)] items-center justify-center bg-background px-6">
+        <div className="text-center">
+          <h1 className="text-xl font-semibold">Você não pode editar este material</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Só quem publicou um material pode alterá-lo.</p>
+          <Button size="lg" className="mt-5" onClick={() => router.push(`/materiais/${id}`)}>
+            Ver o material
           </Button>
         </div>
       </main>
