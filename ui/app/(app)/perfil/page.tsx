@@ -2,6 +2,9 @@
 
 import { useRef, useState } from "react";
 import {
+  LogOut,
+  Palette,
+  Trash2,
   AlertCircle,
   ArrowUpRight,
   CalendarDays,
@@ -38,7 +41,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import PasswordInput from "@/components/password-input";
 import { toast } from "@/components/toast";
+import { ThemeChoice } from "@/components/theme-toggle";
 import UserAvatar from "@/components/user-avatar";
+import { clearToken } from "@/lib/api/client";
 import { changePassword, removeAvatar, updateUser, uploadAvatar, type UserProfile } from "@/lib/api/perfil";
 import { setMe, useMe } from "@/lib/api/swr";
 import { maskPhone } from "@/lib/masks";
@@ -235,11 +240,6 @@ function Profile({ me }: { me: UserProfile }) {
               Gerencie suas informações pessoais e a segurança da sua conta.
             </p>
           </div>
-
-          <Badge variant="outline" className="h-8 gap-2 rounded-full bg-card px-3 text-xs">
-            <span className={`size-2 rounded-full ${statusDot}`} />
-            {me.isActive ? "Conta ativa" : "Conta inativa"}
-          </Badge>
         </div>
 
         {/* Cartão de identidade */}
@@ -303,23 +303,21 @@ function Profile({ me }: { me: UserProfile }) {
                   <span className="truncate">{me.email}</span>
                 </p>
 
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Membro desde {formatDay(me.createdAt)}
-                  {me.avatarUrl && (
-                    <>
-                      {" · "}
-                      <Button
-                        type="button"
-                        variant="link"
-                        onClick={handleAvatarRemove}
-                        disabled={avatarBusy}
-                        className="h-auto p-0 text-xs font-medium text-muted-foreground hover:text-destructive"
-                      >
-                        Remover foto
-                      </Button>
-                    </>
-                  )}
-                </p>
+                <p className="mt-2 text-xs text-muted-foreground">Membro desde {formatDay(me.createdAt)}</p>
+
+                {me.avatarUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleAvatarRemove}
+                    disabled={avatarBusy}
+                    className="mt-2 -ml-2.5 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 />
+                    Remover foto
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -333,7 +331,7 @@ function Profile({ me }: { me: UserProfile }) {
         <div className="mt-7 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_310px]">
           {/* Informações pessoais */}
           <Card className="gap-0 rounded-3xl p-5 sm:p-7">
-            <div className="mb-5 flex items-start justify-between gap-3">
+            <div className="mb-5">
               <div>
                 <h2 className="flex items-center gap-2 text-base font-bold sm:text-lg">
                   <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-accent-foreground">
@@ -343,10 +341,6 @@ function Profile({ me }: { me: UserProfile }) {
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">Confira os dados vinculados à sua conta.</p>
               </div>
-
-              <Button variant="outline" size="icon" onClick={openEdit} aria-label="Editar informações pessoais">
-                <Pencil />
-              </Button>
             </div>
 
             <div className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
@@ -400,6 +394,34 @@ function Profile({ me }: { me: UserProfile }) {
                 <Lock />
                 Alterar senha
                 <ArrowUpRight className="ml-auto" />
+              </Button>
+            </Card>
+
+            <Card className="gap-0 rounded-3xl p-5 md:hidden">
+              <div className="flex items-start gap-3">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+                  <Palette className="size-5" />
+                </span>
+                <div className="pt-0.5">
+                  <h2 className="text-sm font-bold">Aparência</h2>
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">Escolha o tema do aplicativo.</p>
+                </div>
+              </div>
+              <ThemeChoice className="mt-5" />
+
+              <Separator className="my-5" />
+
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={() => {
+                  clearToken();
+                  window.location.href = "/login";
+                }}
+                className="h-11 w-full justify-start font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <LogOut />
+                Sair da conta
               </Button>
             </Card>
           </div>
@@ -550,13 +572,13 @@ function Profile({ me }: { me: UserProfile }) {
 
 function ProfileInfo({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex min-w-0 items-start gap-3 rounded-2xl px-2 py-4 transition-colors hover:bg-muted/60">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-accent text-accent-foreground [&_svg]:size-[18px]">
+    <div className="flex min-w-0 items-center gap-3 rounded-2xl px-2 py-2.5 transition-colors hover:bg-muted/60 sm:items-start sm:py-4">
+      <span className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl border bg-accent text-accent-foreground [&_svg]:size-[18px]">
         {icon}
       </span>
       <div className="min-w-0 flex-1 pt-0.5">
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
-        <p className="mt-1.5 break-words text-sm font-semibold leading-5">{value || "Não informado"}</p>
+        <p className="mt-0.5 break-words text-sm font-semibold leading-5 sm:mt-1.5">{value || "Não informado"}</p>
       </div>
     </div>
   );

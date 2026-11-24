@@ -15,7 +15,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <MotionConfig reducedMotion="user">
           {children}
           {/* No máximo 3 avisos; o tempo pausa com o cursor em cima (comportamento do Sonner) */}
-          <Toaster position="bottom-right" visibleToasts={3} closeButton />
+          <Toaster position="bottom-right" visibleToasts={3} closeButton mobileOffset={{ bottom: "calc(5rem + env(safe-area-inset-bottom))" }} />
         </MotionConfig>
       </SWRConfig>
     </ThemeProvider>

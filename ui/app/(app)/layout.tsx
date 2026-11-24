@@ -5,7 +5,7 @@ import PageTransition from "@/components/page-transition";
 // e só o conteúdo abaixo dela faz a transição
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-background">
+    <div className="min-h-dvh bg-background max-md:pb-[calc(4rem+env(safe-area-inset-bottom))]">
       <Navbar />
       <PageTransition>{children}</PageTransition>
     </div>

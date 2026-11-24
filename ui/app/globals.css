@@ -212,14 +212,17 @@ textarea {
 }
 
 /* Navbar fica parada: é a âncora que mostra que só o conteúdo mudou */
-::view-transition-group(site-header) {
+::view-transition-group(site-header),
+::view-transition-group(site-tabbar) {
   animation: none;
   z-index: 100;
 }
-::view-transition-old(site-header) {
+::view-transition-old(site-header),
+::view-transition-old(site-tabbar) {
   display: none;
 }
-::view-transition-new(site-header) {
+::view-transition-new(site-header),
+::view-transition-new(site-tabbar) {
   animation: none;
 }
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Loader2, Search, Share2, Users } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Loader2, Search, Share2, Users } from "lucide-react";
 import { createUser } from "@/lib/api/signup";
 import { toast } from "@/components/toast";
 import AuthShell from "@/components/auth-shell";
@@ -48,9 +48,29 @@ const BENEFITS = [
   { icon: Users, title: "Conecte-se", text: "Faça parte de uma comunidade acadêmica" },
 ];
 
-function Section({ title, first = false, children }: { title: string; first?: boolean; children: React.ReactNode }) {
+const STEPS = ["Acesso", "Sobre você", "Endereço"];
+
+type AddressLookup = { logradouro?: string; bairro?: string; localidade?: string; uf?: string; erro?: boolean };
+
+// No celular, cada seção é uma etapa: só a etapa atual aparece (no desktop, todas ficam visíveis)
+function Section({
+  title,
+  first = false,
+  hiddenOnMobile = false,
+  sectionRef,
+  children,
+}: {
+  title: string;
+  first?: boolean;
+  hiddenOnMobile?: boolean;
+  sectionRef?: React.Ref<HTMLFieldSetElement>;
+  children: React.ReactNode;
+}) {
   return (
-    <fieldset className={first ? "" : "mt-9 border-t border-border pt-7"}>
+    <fieldset
+      ref={sectionRef}
+      className={cn(!first && "mt-9 border-t border-border pt-7 max-sm:mt-0 max-sm:border-0 max-sm:pt-0", hiddenOnMobile && "max-sm:hidden")}
+    >
       <legend className="sr-only">{title}</legend>
       <p aria-hidden="true" className="mb-5 text-base font-semibold text-brand-ink">
         {title}
@@ -67,6 +87,74 @@ export default function Signup() {
   const [submitting, setSubmitting] = useState(false);
   // Erros mostrados ao lado de cada campo, no lugar de alert()
   const [errors, setErrors] = useState<{ email?: string; password?: string; terms?: string; form?: string }>({});
+  const [step, setStep] = useState(0);
+  const [cepStatus, setCepStatus] = useState<"loading" | "notfound" | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const sectionRefs = useRef<(HTMLFieldSetElement | null)[]>([]);
+
+  // Confere e-mail e senha repetidos (usado ao sair da 1ª etapa e ao enviar)
+  function accessErrors(formData: FormData) {
+    const nextErrors: typeof errors = {};
+    if (formData.get("email") !== formData.get("confirmEmail")) nextErrors.email = "Os e-mails não são iguais. Confira a digitação.";
+    if (formData.get("password") !== formData.get("confirmPassword"))
+      nextErrors.password = "As senhas não são iguais. Digite a mesma senha nos dois campos.";
+    return nextErrors;
+  }
+
+  function goToStep(next: number) {
+    setStep(next);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // Avança só se os campos da etapa atual forem válidos (mesmas regras do envio)
+  function nextStep() {
+    const fields = sectionRefs.current[step]?.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select") ?? [];
+    for (const field of fields) {
+      if (!field.checkValidity()) {
+        field.reportValidity();
+        return;
+      }
+    }
+
+    if (step === 0) {
+      const nextErrors = accessErrors(new FormData(formRef.current!));
+      setErrors(nextErrors);
+      if (Object.keys(nextErrors).length > 0) return;
+    }
+
+    goToStep(step + 1);
+  }
+
+  // CEP completo: preenche rua, bairro, cidade e estado pelo ViaCEP e leva o foco ao número
+  async function lookupCep(cep: string) {
+    const digits = cep.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+
+    setCepStatus("loading");
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data: AddressLookup = await response.json();
+      if (data.erro) {
+        setCepStatus("notfound");
+        return;
+      }
+
+      const form = formRef.current!;
+      const fill = (name: string, value?: string) => {
+        const input = form.elements.namedItem(name) as HTMLInputElement | null;
+        if (input && value) input.value = value;
+      };
+      fill("street", data.logradouro);
+      fill("district", data.bairro);
+      fill("city", data.localidade);
+      fill("state", data.uf);
+      setCepStatus(null);
+      (form.elements.namedItem("number") as HTMLInputElement | null)?.focus();
+    } catch {
+      // Sem conexão com o ViaCEP: a pessoa preenche o endereço à mão
+      setCepStatus(null);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -74,17 +162,14 @@ export default function Signup() {
     const formData = new FormData(event.currentTarget);
 
     const email = formData.get("email") as string;
-    const confirmEmail = formData.get("confirmEmail") as string;
-
     const password = formData.get("password") as string;
-    const confirmPassword = formData.get("confirmPassword") as string;
 
-    const nextErrors: typeof errors = {};
-    if (email !== confirmEmail) nextErrors.email = "Os e-mails não são iguais. Confira a digitação.";
-    if (password !== confirmPassword) nextErrors.password = "As senhas não são iguais. Digite a mesma senha nos dois campos.";
+    const nextErrors = accessErrors(formData);
     if (!acceptedTerms) nextErrors.terms = "Marque a caixa para aceitar os termos e continuar.";
 
     setErrors(nextErrors);
+    // No celular, o erro de e-mail ou senha fica na 1ª etapa: volta para lá
+    if (nextErrors.email || nextErrors.password) setStep(0);
     if (Object.keys(nextErrors).length > 0) return;
 
     const field = (name: string) => String(formData.get(name) ?? "").trim();
@@ -154,8 +239,20 @@ export default function Signup() {
         <span className="font-semibold text-destructive">*</span> são obrigatórios.
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-9">
-        <Section title="Acesso" first>
+      {/* Progresso das etapas (só no celular) */}
+      <div className="mt-6 sm:hidden" aria-live="polite">
+        <p className="text-xs font-medium text-muted-foreground">
+          Etapa {step + 1} de {STEPS.length} · <span className="text-foreground">{STEPS[step]}</span>
+        </p>
+        <div className="mt-2 grid grid-cols-3 gap-1.5" aria-hidden="true">
+          {STEPS.map((title, index) => (
+            <span key={title} className={cn("h-1 rounded-full transition-colors", index <= step ? "bg-primary" : "bg-muted")} />
+          ))}
+        </div>
+      </div>
+
+      <form ref={formRef} onSubmit={handleSubmit} className="mt-9 max-sm:mt-6">
+        <Section title="Acesso" first hiddenOnMobile={step !== 0} sectionRef={(el) => { sectionRefs.current[0] = el; }}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <FormField id="firstName" label="Nome" required>
               <Input id="firstName" name="firstName" type="text" required autoComplete="given-name" className="h-11" />
@@ -208,7 +305,7 @@ export default function Signup() {
           </div>
         </Section>
 
-        <Section title="Sobre você">
+        <Section title="Sobre você" hiddenOnMobile={step !== 1} sectionRef={(el) => { sectionRefs.current[1] = el; }}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
             <FormField id="cpf" label="CPF" required>
               <Input
@@ -273,7 +370,7 @@ export default function Signup() {
           </div>
         </Section>
 
-        <Section title="Endereço">
+        <Section title="Endereço" hiddenOnMobile={step !== 2} sectionRef={(el) => { sectionRefs.current[2] = el; }}>
           <input type="hidden" name="country" value="Brasil" />
 
           <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-6">
@@ -297,6 +394,7 @@ export default function Signup() {
                     addressField.name === "zipcode"
                       ? (event) => {
                           event.target.value = maskCep(event.target.value);
+                          lookupCep(event.target.value);
                         }
                       : undefined
                   }
@@ -305,8 +403,31 @@ export default function Signup() {
               </FormField>
             ))}
           </div>
+
+          {cepStatus && (
+            <p role="status" className="mt-3 text-xs text-muted-foreground">
+              {cepStatus === "loading" ? "Buscando endereço pelo CEP..." : "CEP não encontrado. Preencha o endereço manualmente."}
+            </p>
+          )}
         </Section>
 
+        {/* Navegação entre etapas (só no celular) */}
+        {step < STEPS.length - 1 && (
+          <div className="mt-8 flex gap-3 sm:hidden">
+            {step > 0 && (
+              <Button type="button" variant="outline" size="lg" className="h-11 flex-1" onClick={() => goToStep(step - 1)}>
+                <ArrowLeft />
+                Voltar
+              </Button>
+            )}
+            <Button type="button" size="lg" className="h-11 flex-[2] font-semibold" onClick={nextStep}>
+              Continuar
+              <ArrowRight />
+            </Button>
+          </div>
+        )}
+
+        <div className={cn(step !== STEPS.length - 1 && "max-sm:hidden")}>
         <div className="mt-9 border-t border-border pt-7">
           <div className="flex items-start gap-3">
             <Checkbox
@@ -315,7 +436,7 @@ export default function Signup() {
               onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
               aria-invalid={Boolean(errors.terms)}
               aria-describedby={errors.terms ? "terms-error" : undefined}
-              className="mt-0.5"
+              className="relative mt-0.5 after:absolute after:-inset-3.5 after:content-['']"
             />
 
             <Label htmlFor="terms" className="inline cursor-pointer font-normal leading-5 text-foreground/90">
@@ -347,6 +468,12 @@ export default function Signup() {
           {submitting && <Loader2 className="animate-spin" aria-hidden="true" />}
           {submitting ? "Criando conta..." : "Criar conta"}
         </Button>
+
+        <Button type="button" variant="ghost" className="mt-2 w-full text-muted-foreground sm:hidden" onClick={() => goToStep(step - 1)}>
+          <ArrowLeft />
+          Voltar
+        </Button>
+        </div>
       </form>
 
       <p className="mt-8 border-t border-border pt-6 text-sm text-muted-foreground">

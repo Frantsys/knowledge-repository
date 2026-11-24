@@ -25,7 +25,7 @@ export default function PasswordInput({
         onClick={() => setVisible(!visible)}
         aria-label={visible ? `Ocultar ${label}` : `Mostrar ${label}`}
         aria-pressed={visible}
-        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+        className="absolute inset-y-0 right-0 h-full w-11 rounded-l-none text-muted-foreground hover:bg-transparent hover:text-foreground dark:hover:bg-transparent"
       >
         {visible ? <EyeOff /> : <Eye />}
       </Button>

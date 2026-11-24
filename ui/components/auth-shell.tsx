@@ -47,8 +47,8 @@ export default function AuthShell({
         {/* Tema claro/escuro também nas telas de acesso */}
         <ThemeToggle className="absolute right-6 top-6 hidden sm:inline-flex" />
         <div className={`w-full ${wide ? "max-w-2xl" : "max-w-sm"}`}>
-          <ThemeChoice className="mb-8 ml-auto w-48 sm:hidden" />
           {children}
+          <ThemeChoice className="mx-auto mt-8 w-48 sm:hidden" />
         </div>
       </main>
     </div>

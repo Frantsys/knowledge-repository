@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
-import { BookOpen, ChevronDown, Compass, Folder, Home, LogOut, Menu, Plus, UserRound, X } from "lucide-react";
+import { motion } from "motion/react";
+import { BookOpen, ChevronDown, Compass, Folder, Home, LogOut, Plus, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,15 +15,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
 import LinkProgress from "@/components/link-progress";
 import PublishDialog from "@/components/publish-dialog";
 import { Skeleton } from "@/components/skeleton";
-import { ThemeChoice, ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import UserAvatar from "@/components/user-avatar";
 import { clearToken, getToken } from "@/lib/api/client";
 import { useMe } from "@/lib/api/swr";
-import { OPEN_PUBLISH_EVENT, useEscapeKey } from "@/lib/hooks";
+import { OPEN_PUBLISH_EVENT } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 
 const NAVIGATION = [
@@ -32,6 +31,52 @@ const NAVIGATION = [
   { name: "Meus materiais", href: "/meusmateriais", icon: Folder },
 ];
 
+// Abas do celular: "Publicar" no centro (href null) e o Perfil no lugar do antigo menu da conta
+const TABS = [
+  NAVIGATION[0],
+  NAVIGATION[1],
+  { name: "Publicar", href: null, icon: Plus },
+  { name: "Meus", href: "/meusmateriais", icon: Folder },
+  { name: "Perfil", href: "/perfil", icon: UserRound },
+];
+
+function TabLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+  transitionTypes,
+}: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  active: boolean;
+  transitionTypes: string[];
+}) {
+  return (
+    <Link
+      href={href}
+      transitionTypes={transitionTypes}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "relative flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
+        active ? "text-primary" : "text-muted-foreground"
+      )}
+    >
+      {active && (
+        <motion.span
+          layoutId="tabbar-active"
+          className="absolute top-0 h-0.5 w-8 rounded-b bg-primary"
+          transition={{ type: "spring", stiffness: 500, damping: 35 }}
+        />
+      )}
+      <Icon className="size-[22px]" strokeWidth={active ? 2.2 : 1.8} />
+      {label}
+      <LinkProgress />
+    </Link>
+  );
+}
+
 export default function Navbar() {
   const pathname = usePathname();
 
@@ -39,7 +84,6 @@ export default function Navbar() {
   const { data: me, isLoading: loadingMe } = useMe();
   const userName = me?.firstName ?? "";
 
-  const [menuOpen, setMenuOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
 
   // Toda página logada renderiza a navbar: sem token, volta para o login
@@ -51,31 +95,10 @@ export default function Navbar() {
 
   // Telas como Início e Meus materiais têm botões "Publicar" que abrem o diálogo da navbar
   useEffect(() => {
-    const open = () => {
-      setMenuOpen(false);
-      setPublishOpen(true);
-    };
+    const open = () => setPublishOpen(true);
     window.addEventListener(OPEN_PUBLISH_EVENT, open);
     return () => window.removeEventListener(OPEN_PUBLISH_EVENT, open);
   }, []);
-
-  const closeMenu = useCallback(() => setMenuOpen(false), []);
-  useEscapeKey(menuOpen, closeMenu);
-
-  // Bloqueia a rolagem da página com o menu do celular aberto
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [menuOpen]);
-
-  // Ajuste durante a renderização (sem efeito): ao mudar de página, fecha o menu do celular
-  const [lastPathname, setLastPathname] = useState(pathname);
-  if (pathname !== lastPathname) {
-    setLastPathname(pathname);
-    setMenuOpen(false);
-  }
 
   const isActive = (path: string) => (path === "/home" ? pathname === "/home" || pathname === "/" : pathname.startsWith(path));
 
@@ -89,7 +112,6 @@ export default function Navbar() {
   }
 
   function openPublish() {
-    setMenuOpen(false);
     setPublishOpen(true);
   }
 
@@ -215,91 +237,41 @@ export default function Navbar() {
             </DropdownMenu>
           </div>
 
-          {/* Botão do menu (celular) */}
-          <Button
-            variant="ghost"
-            size="icon-lg"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="ml-auto md:hidden"
-            aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
-            aria-expanded={menuOpen}
-          >
-            {menuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
-          </Button>
         </div>
 
-        {/* Menu (celular) */}
-        <AnimatePresence>
-          {menuOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="absolute inset-x-0 top-16 overflow-hidden border-b bg-card shadow-lg md:hidden"
-            >
-              <div className="space-y-1 p-3">
-                {NAVIGATION.map((item, index) => {
-                  const Icon = item.icon;
-                  const active = isActive(item.href);
+      </header>
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      transitionTypes={directionTo(index)}
-                      aria-current={active ? "page" : undefined}
-                      onClick={() => setMenuOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors",
-                        active ? "bg-accent text-accent-foreground" : "hover:bg-muted"
-                      )}
-                    >
-                      <Icon className="size-[18px]" />
-                      {item.name}
-                    </Link>
-                  );
-                })}
-
+      {/* Barra de abas (celular): os destinos e o "Publicar" ao alcance do polegar */}
+      <nav
+        aria-label="Navegação principal"
+        className="fixed inset-x-0 bottom-0 z-50 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+        style={{ viewTransitionName: "site-tabbar" }}
+      >
+        <div className="mx-auto grid h-16 max-w-md grid-cols-5">
+          {TABS.map((item) =>
+            item.href === null ? (
+              <div key="publish" className="flex items-center justify-center">
                 <Button
-                  variant="outline"
                   onClick={openPublish}
-                  className="mt-2 h-11 w-full border-primary/60 text-primary hover:bg-accent hover:text-primary"
+                  aria-label="Publicar material"
+                  className="size-12 rounded-2xl shadow-md shadow-primary/25"
                 >
-                  <Plus />
-                  Publicar material
-                </Button>
-
-                <Separator className="my-3" />
-
-                <Link
-                  href="/perfil"
-                  transitionTypes={["nav-forward"]}
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-muted"
-                >
-                  <UserAvatar avatarUrl={me?.avatarUrl} name={userName} className="size-9 text-sm" />
-                  <span>
-                    <span className="block text-sm font-medium">{userName}</span>
-                    <span className="block text-xs text-muted-foreground">Ver meu perfil</span>
-                  </span>
-                  <UserRound className="ml-auto size-[18px] text-muted-foreground" />
-                </Link>
-
-                <div className="flex items-center justify-between px-3 py-2">
-                  <span className="text-sm text-muted-foreground">Tema</span>
-                  <ThemeChoice className="w-48" />
-                </div>
-
-                <Button variant="ghost" onClick={handleLogout} className="h-11 w-full justify-start gap-3 px-3 text-destructive hover:bg-destructive/10 hover:text-destructive">
-                  <LogOut />
-                  Sair
+                  <Plus className="size-6" />
                 </Button>
               </div>
-            </motion.div>
+            ) : (
+              <TabLink
+                key={item.href}
+                href={item.href}
+                label={item.name}
+                icon={item.icon}
+                active={isActive(item.href)}
+                transitionTypes={item.href === "/perfil" ? ["nav-forward"] : directionTo(NAVIGATION.findIndex((nav) => nav.href === item.href))}
+              />
+            )
           )}
-        </AnimatePresence>
-      </header>
+        </div>
+      </nav>
 
       <PublishDialog open={publishOpen} onOpenChange={setPublishOpen} course={me?.course} />
     </>
